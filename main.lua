@@ -26,12 +26,12 @@ function love.load()
 	local currentSong = songs[tempSongIndex]
 	local src = love.audio.newSource("songs/"..currentSong.pathTitle.."/"..currentSong.meta.MUSIC, "stream")
 	love.audio.play(src)
-	--src:seek(35)
+	src:seek(80)
 
 	local chart = currentSong.charts.Challenge
 
 	for i, v in pairs(chart.markers) do
-		print(v[3], v.start, v.t_start)
+		print(v[1], v.start, v.speed, v.length)
 	end
 
 	--break down the NOTES stuff
@@ -68,7 +68,7 @@ function love.load()
 
 	currentUI.NOTEDATA = notes --TEMPORARY AS FUCK
 
-	local noteContainer = ui.new(currentUI, "NoteContainer", {0,300,0,75},{0,20,0,20})
+	local noteContainer = ui.new(currentUI, "NoteContainer", {0,20,0,5},{0,20,0,200})
 
 
 	function getCurrentBeat(src, chart)
@@ -76,27 +76,34 @@ function love.load()
 
 		local beat = 0
 		local bpm = 0
+		local speed = 1
+		local lastSpeed = 1
 
 		for i, marker in pairs(chart.markers) do
 			if t >= marker.t_start then
 				bpm = marker.bpm
+				speed = marker.speed
 				beat = marker.start + (t - marker.t_start)*bpm/60
 				
-				if marker[3] == "STOPS" and (t - marker.t_start) < marker.dt then
+				if marker[1] == "STOPS" and (t - marker.t_start) < marker.dt then
 					beat = marker.start
+				elseif marker[1] == "SPEEDS" and (beat-marker.start) < marker.length then
+					local alpha = (beat-marker.start)/marker.length
+					speed = alpha*(speed-lastSpeed) + lastSpeed
 				end
 			else
 				break
 			end
+			lastSpeed = speed
 		end
 
-		return beat
+		return beat, speed
 	end
 	for i = 1, 4 do
 		local noteCol = ui.new(noteContainer, i, {.25,0,4,0},{(i-1)*.25,0,0,0})
 		
 		function noteCol:selfdraw(x,y,w,h)
-			local currentBeat = getCurrentBeat(src, chart)
+			local currentBeat, currentSpeed = getCurrentBeat(src, chart)
 
 			if i == 1 then
 				love.graphics.print(currentBeat, 10,10)
@@ -105,15 +112,17 @@ function love.load()
 			--DRAW NOTES IN THIS COLUMN
 			local notelist = self.parent.parent.NOTEDATA[i]
 			for _, note in pairs(notelist) do
-				if note.ntype == "M" then
-					love.graphics.setColor(255,0,0)
-					print("bep")
-				else
-					love.graphics.setColor(255,255,255)
-				end
-				love.graphics.circle("line", x+w/2, y+w/2 + (note.beat - currentBeat)*h, w/3)
-				if note.length then
-					love.graphics.line(x+w/2, y+w/2 + (note.beat - currentBeat)*h, x+w/2, y+w/2 + (note.beat - currentBeat + note.length)*h)
+				if (note.beat - currentBeat) < 8 and (note.beat - currentBeat) > -2 
+					or (note.length and note.beat < currentBeat and note.beat+note.length > currentBeat-2) then
+					if note.ntype == "M" then
+						love.graphics.setColor(255,0,0)
+					else
+						love.graphics.setColor(255,255,255)
+					end
+					love.graphics.circle("line", x+w/2, y+w/2 + (note.beat - currentBeat)*h*currentSpeed, w/3)
+					if note.length then
+						love.graphics.line(x+w/2, y+w/2 + (note.beat - currentBeat)*h*currentSpeed, x+w/2, y+w/2 + (note.beat - currentBeat + note.length)*h)
+					end
 				end
 			end
 		end

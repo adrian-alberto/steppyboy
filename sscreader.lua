@@ -10,7 +10,7 @@
   track is loaded
 ]]
 
-local LISTTAGS = {BPMS = 1, DELAYS = 2, STOPS = 3, WARPS = 4}
+local LISTTAGS = {BPMS = 1, SPEEDS = 2, DELAYS = 3, STOPS = 5, WARPS = 6}
 
 ---------------------------
 local ssc = {}
@@ -61,15 +61,19 @@ function song.parse(filepath)
 			table.insert(tempModes, current)
 		elseif value ~= "" then
 			if LISTTAGS[tag] then
-				local v2 = {}
+				local arrVal = {}
 				local i = 0
-				for x in string.gmatch(value, "([%d%.=]+),?") do
-					local t, v = string.match(x, "([%d%.]+)=([%d%.]+)")
-					--TUPLES:  {offset, value, tag}
-					table.insert(v2, {tonumber(t),tonumber(v), tag})
+				for tup in string.gmatch(value, "([%d%.=]+),?") do
+					local nextTup = {}
+					nextTup[1] = tag --First element of tuple is the tag
+					for element in string.gmatch(tup, "([%d%.]+)=?") do
+						--Append elements of the tuple to the nextTup array
+						table.insert(nextTup, tonumber(element))
+					end
+					table.insert(arrVal, nextTup)
 				end
 
-				value = v2
+				value = arrVal
 			end
 			current[tag] = value
 		end
@@ -91,23 +95,24 @@ function song.parse(filepath)
 				end
 			end
 			table.sort(markers, function(a, b)
-				--TUPLES:  {offset, value, tag}
-				if a[1] == b[1] then
-					return LISTTAGS[a[3]] < LISTTAGS[b[3]]
+				--TUPLES:  {tag, offset, value, ...}
+				if a[2] == b[2] then
+					return LISTTAGS[a[1]] < LISTTAGS[b[1]]
 				else
-					return a[1] < b[1]
+					return a[2] < b[2]
 				end
 			end)
 
 			local bpm = 0
+			local speed = 1
 			local lastBPMchangeBeat = 0
 			local lastBPMchangeTime = 0
 			local totalWarpSinceBPMchange = 0
 			local totalDelay = 0
 			for _, tup in pairs(markers) do
-				local beat = tup[1]
-				local value = tup[2]
-				local tag = tup[3]
+				local beat = tup[2]
+				local value = tup[3]
+				local tag = tup[1]
 
 				tup.start = beat
 				tup.t_start = 0
@@ -119,6 +124,11 @@ function song.parse(filepath)
 					lastBPMchangeBeat = beat
 					lastBPMchangeTime = tup.t_start
 					totalWarpSinceBPMchange = 0
+				elseif tag == "SPEEDS" then
+					speed = value
+					local boolConvertToTime = (tup[5] == 1)
+					local rampUp = tup[4] or 0
+					tup.length = boolConvertToTime and rampUp/(bpm/60) or rampUp
 				elseif tag == "STOPS" then
 					tup.dt = value
 					tup.length = value*bpm/60
@@ -133,6 +143,7 @@ function song.parse(filepath)
 					totalWarpSinceBPMchange = totalWarpSinceBPMchange + tup.length
 				end
 				tup.bpm = bpm
+				tup.speed = speed
 			end
 
 			v.markers = markers
