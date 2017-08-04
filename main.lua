@@ -1,204 +1,151 @@
-local smreader = require("smreader")
-local testtrack
-local src
-local arrowimg
-local beatOffset = -0.2
+require "oop"
+require "ui"
+ssc = require("sscreader")
 
-function love.load(arg)
-	local GAMEDIR = arg[1]
-	arrowimg = love.graphics.newImage("resources/arrow_screen_64.png")
+local currentUI
+local tempSongIndex = 5
 
-	src = love.audio.newSource("songs/Cheerleader (Felix Jaehn Mix)/Cheerleader (Felix Jaehn Mix).ogg", "stream")
-	x = io.open(GAMEDIR .. "/songs/Cheerleader (Felix Jaehn Mix)/Cheerleader (Felix Jaehn Mix).sm")
-	local smdata = smreader.parse(x)
+function love.load()
+	--temp
+	love.audio.setVolume(0.1)
 
-	--[[for i, v in pairs(smdata) do
-		if i ~= "TRACKS" then
-			print(i .. ": " .. string.format("%q", v))
-		end
-	end]]
+	--LOAD THE SONGS IN
+	local songtitles = love.filesystem.getDirectoryItems("songs")
+	local songs = {}
 
-	testtrack = smdata.TRACKS["dance-single[9]"]
+
+	for i, title in pairs(songtitles) do
+		local songObject = ssc.song.new("songs/"..title)
+		songObject.pathTitle = title
+		table.insert(songs, songObject)
+	end
+	table.sort(songs, function(a, b)
+		return a.meta.ARTIST..a.meta.TITLE < b.meta.ARTIST..b.meta.TITLE
+	end)
+	currentUI = ui.new()
+	local currentSong = songs[tempSongIndex]
+	local src = love.audio.newSource("songs/"..currentSong.pathTitle.."/"..currentSong.meta.MUSIC, "stream")
 	love.audio.play(src)
-	src:seek(20)
-	--love.event.quit()
+
+	local chart = currentSong.charts.Challenge
+
+	--break down the NOTES stuff
+	local notes = {{},{},{},{}} --4 separate note queues
+
+	local i = 0 --measure index
+	for measure in string.gmatch(chart.NOTES, "(%d+),?") do
+		local numrows = string.len(measure)/4
+		local j = 0
+		for rowstr in string.gmatch(measure, "%d%d%d%d") do
+			local beat = 4*i + 4*j/numrows
+
+			local col_index = 1
+			for note in string.gmatch(rowstr, "%d") do
+				if note == "3" then
+					local prevnote = notes[col_index][#notes[col_index]]
+					if prevnote and prevnote.ntype == "2" or prevnote.ntype == "4" then
+						prevnote.length = beat - prevnote.beat
+					end
+				elseif note ~= "0" then
+					local noteObj = {ntype = note, beat = beat}
+					table.insert(notes[col_index], noteObj)
+				end
+				col_index = col_index + 1
+			end
+			j = j + 1
+		end
+		i = i + 1
+	end
+
+	currentUI.NOTEDATA = notes --TEMPORARY AS FUCK
+
+	local noteContainer = ui.new(currentUI, "NoteContainer", {0,40,0,10},{0,20,0,200})
+	local bpm = 128--currentSong.meta.BPMS
+	local offset = tonumber(currentSong.meta.OFFSET)
+	local bps = bpm/60
+
+	function getCurrentBeat(src, chart)
+		local t = src:tell()
+		local beat, currentBPM
+
+
+		if type(chart.BPMS) == "table" then
+			local latest = 0
+			local latestbpm
+			for offset, bpm in pairs(chart.BPMS) do
+				if offset <= t and offset >= latest then
+					latest = offset
+					latestbpm = bpm
+				end
+			end
+			bpm = latestbpm
+			beat = (src:tell()-latest + chart.OFFSET)*latestbpm/60
+		else
+			bpm = chart.BPMS
+			beat = (src:tell() + chart.OFFSET)*(bpm)/60
+		end
+
+
+
+		--[[local tempbeat = beat
+		for offset, db in pairs(chart.WARPS) do
+			if tempbeat > offset then
+				tempbeat = tempbeat - db
+			end
+		end]]
+		--beat = tempbeat
+
+		local tempbeat = beat
+		for offset, sec in pairs(chart.STOPS) do
+			if beat > offset + sec*bpm/60 then
+				beat = beat - sec*bpm/60
+			elseif beat > offset then
+				beat = offset
+			end
+		end
+		--beat = tempbeat
+		return beat
+	end
+	for i = 1, 4 do
+		local noteCol = ui.new(noteContainer, i, {.25,0,4,0},{(i-1)*.25,0,0,0})
+		
+		function noteCol:selfdraw(x,y,w,h)
+			local bOffset = -offset*bps
+			local currentBeat = getCurrentBeat(src, chart)
+			if i == 1 then
+				love.graphics.print(currentBeat, 10,10)
+			end
+
+			local notelist = self.parent.parent.NOTEDATA[i]
+			for _, note in pairs(notelist) do
+				love.graphics.circle("line", x+w/2, y+w/2 + (note.beat - currentBeat)*h, w/3)
+			end
+		end
+	end
+
+	function currentUI:selfdraw(x,y,w,h)
+		--[[for i, col in pairs(self.NOTEDATA) do
+			for _, note in pairs(col) do
+				love.graphics.circle("line", 8*i, 8*note.beat*4, 2)
+			end
+
+		end]]
+	end
+
 end
 
 
-
-local heldNotes = {}
-local lastTap = {0,0,0,0,0,0,0,0}
+ 
 function love.update(dt)
-	if src and testtrack then
-		local bpm = 118
-		local trackTime = src:tell()
-		local currentBeat = trackTime*bpm/60 - 0.032 + beatOffset
-		--clear finished held notes
-		for i, note in ipairs(heldNotes) do
-			if note.beat + note.length < currentBeat then
-				note.holding = false
-				heldNotes[i] = nil
-			end
-		end
 
-		--miss notes
-		for i = testtrack.noteindex, #testtrack do
-			local note = testtrack[i]
-			if note.beat > currentBeat - 0.3 then
-				break
-			end
-			if not note.status then
-				hitNote(note, "miss")
-				testtrack.noteindex = i
-			end
-		end
-	end
+
 end
 
-local testcolors = {{200,30,30},{30,30,200},{200,200,30},{30,200,30}}
-local rotations = {-math.pi/2, math.pi, 0, math.pi/2, -math.pi/2, math.pi, 0, math.pi/2, }
 function love.draw()
-	if not src then return end
-	love.graphics.setBackgroundColor(20,20,60)
-	love.graphics.setBlendMode("screen")
-	local bpm = 118
-	local trackTime = src:tell()
-	local currentBeat = trackTime*bpm/60 - 0.032 + beatOffset
-	local w, h = love.window.getMode()
-	local cellheight = 128
-	local cellwidth = 64
-	local pad = 6
-
-	local x0 = 64
-	local y0 = 64
-	for i = 0, 3 do
-		local bright = 100 * (1 - (currentBeat % 1)) + 50
-		bright = bright + math.max(0,200 * (0.5 - (currentBeat - lastTap[i+1])))
-		bright = math.min(255,bright)
-		love.graphics.setColor(bright, bright, bright)
-		love.graphics.circle("line", x0 + i*(cellwidth+pad), y0, cellwidth/2)
+	local width, height = love.window.getMode()
+	love.graphics.setBackgroundColor(20,20,20)
+	love.graphics.setColor(255,255,255)
+	if currentUI then
+		currentUI:draw(0,0,width,height)
 	end
-
-
-	
-
-	--NOTES
-	local notecount = 0
-	for i, note in ipairs(testtrack) do
-		local x = x0 + (note.dir-1) * (cellwidth + pad)
-		local y = y0 + note.beat * cellheight - currentBeat*cellheight
-		if y > 2*h then
-			--off screen
-			break
-		elseif y + (note.length or 0)*cellheight < -h then
-			--off screen
-		else
-			notecount = notecount + 1
-			--color pick
-			love.graphics.setColor(200,200,200)
-			for j = 1, #testcolors do
-				if (note.beat) % (2^(1-j)) <= 0.000001 then
-					love.graphics.setColor(unpack(testcolors[j]))
-					break
-				end
-			end
-			if note.status == "miss" then
-				local r,g,b = love.graphics.getColor()
-				love.graphics.setColor(r/2,g/2,b/2)
-			elseif note.status and not note.holding then
-				love.graphics.setColor(0,0,0)
-			end
-
-
-	
-			if note.ntype ~= 1 then
-				--Draw the trails
-				if note.holding and note.beat+note.length > currentBeat then
-					love.graphics.circle("line", x, y0, cellwidth/2)
-					love.graphics.draw( arrowimg, x, y0, rotations[note.dir], 1, 1, cellwidth/2, cellwidth/2)
-					love.graphics.line(x-cellwidth/2, y0, x-cellwidth/2, y + note.length*cellheight)
-					love.graphics.line(x+cellwidth/2, y0, x+cellwidth/2, y + note.length*cellheight)
-					love.graphics.arc("line","open", x, y + note.length*cellheight, cellwidth/2, 0, math.pi)
-				else
-					love.graphics.circle("line", x, y, cellwidth/2)
-					love.graphics.draw( arrowimg, x, y, rotations[note.dir], 1, 1, cellwidth/2, cellwidth/2)
-					love.graphics.line(x-cellwidth/2, y, x-cellwidth/2, y + note.length*cellheight)
-					love.graphics.line(x+cellwidth/2, y, x+cellwidth/2, y + note.length*cellheight)
-					love.graphics.arc("line","open", x, y + note.length*cellheight, cellwidth/2, 0, math.pi)
-				end
-				
-			else
-				--Draw just a standard note
-				love.graphics.circle("line", x, y, cellwidth/2)
-				love.graphics.draw( arrowimg, x, y, rotations[note.dir], 1, 1, cellwidth/2, cellwidth/2)
-			end
-		end
-	end
-	love.graphics.print(notecount .. " notes", 10, 10)
-end
-
-function hitNote(note, status)
-	if note then
-		note.status = status
-	else
-
-	end
-end
-
-function pressNote(dir, track, trackTime)
-	local bpm = 118
-	local currentBeat = trackTime*bpm/60 - 0.032 + beatOffset
-	local didhit = false
-	lastTap[dir] = currentBeat
-	for i = track.noteindex, #track do
-		local note = track[i]
-		local diff = math.abs(currentBeat - note.beat)
-		if note.beat < currentBeat - 0.3 then
-			hitNote(note, "miss")
-			track.noteindex = i
-		elseif diff <= 0.6 then
-			if note.dir == dir and not note.status then
-				if note.ntype ~= 1 then
-					note.holding = true
-					heldNotes[dir] = note
-				end
-				if diff < 0.3 then
-					hitNote(note, "perfect")
-				elseif diff < 0.4 then
-					hitNote(note, "good")
-				else
-					hitNote(note, "ok")
-				end
-				didhit = true
-				break
-			end
-		else
-			break
-		end
-	end
-	if not didhit then
-		hitNote(nil, "bad")
-	end
-end
-
-function releaseNote(dir, track, trackTime)
-	local bpm = 118
-	local currentBeat = trackTime*bpm/60 - 0.032 + beatOffset
-	if heldNotes[dir] then
-		local note = heldNotes[dir]
-		if currentBeat - (note.length + note.beat) - currentBeat > -0.6 then
-			hitNote(note, "miss")
-		end
-		note.holding = false
-		heldNotes[dir] = nil
-	end
-end
-
-local keytranslate = {left = 1, down = 2, up = 3, right = 4}
-function love.keypressed(key)
-	if keytranslate[key] then pressNote(keytranslate[key], testtrack, src:tell()) end
-end
-
-function love.keyreleased(key)
-	if keytranslate[key] then releaseNote(keytranslate[key], testtrack, src:tell()) end
 end
