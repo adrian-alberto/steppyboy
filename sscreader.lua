@@ -10,11 +10,7 @@
   track is loaded
 ]]
 
-local LISTTAGS = {"BPMS","STOPS","DELAYS", "WARPS"}
-for i, v in ipairs(LISTTAGS) do
-LISTTAGS[v] = true
-LISTTAGS[i] = nil
-end
+local LISTTAGS = {BPMS = 1, DELAYS = 2, STOPS = 3, WARPS = 4}
 
 ---------------------------
 local ssc = {}
@@ -59,8 +55,6 @@ function song.parse(filepath)
 	local tempModes = {}
 	local current = meta
 
-
-
 	for tag, value in string.gmatch(contents, "#(%w+):(.-);") do
 		if tag == "NOTEDATA" then
 			current = {}
@@ -71,15 +65,22 @@ function song.parse(filepath)
 				local i = 0
 				for x in string.gmatch(value, "([%d%.=]+),?") do
 					local t, v = string.match(x, "([%d%.]+)=([%d%.]+)")
-					v2[tonumber(t)] = tonumber(v)
+					--v2[tonumber(t)] = tonumber(v)
+
+					--TUPLES:  {offset, value, tag}
+					table.insert(v2, {tonumber(t),tonumber(v), tag})
 					i = i + 1
 				end
+				--[[table.sort(v2, function(a, b)
+					return a[1] < b[1]
+				end)]]
 
-				if i == 1 and tag == "BPMS" then
+				--[[if i == 1 and tag == "BPMS" then
 					value = v2[next(v2)]
 				else
 					value = v2
-				end
+				end]]
+				value = v2
 			end
 			current[tag] = value
 		end
@@ -89,7 +90,65 @@ function song.parse(filepath)
 	for i, v in pairs(tempModes) do
 		if v.STEPSTYPE == "dance-single" then
 			charts[v.DIFFICULTY] = v
-			setmetatable(charts, {__index=meta})
+			setmetatable(v, {__index=meta})
+
+			--compute timing markers
+			local markers = {}
+			for mtype, _ in pairs(LISTTAGS) do
+				if v[mtype] then
+					for _, tup in pairs(v[mtype]) do
+						table.insert(markers, tup)
+					end
+				end
+			end
+			table.sort(markers, function(a, b)
+				--TUPLES:  {offset, value, tag}
+				if a[1] == b[1] then
+					return LISTTAGS[a[3]] < LISTTAGS[b[3]]
+				else
+					return a[1] < b[1]
+				end
+			end)
+
+			local actualOffset = 0
+			local currentFileBeat = 0
+			local bpm = 0
+			local lastBPMchangeBeat = 0
+			local lastBPMchangeTime = 0
+			local totalWarpSinceBPMchange = 0
+			local renderOffset = 0
+			local total_delay = 0
+			for _, tup in pairs(markers) do
+				local beat = tup[1]
+				local value = tup[2]
+				local tag = tup[3]
+
+				tup.start = beat
+				tup.t_start = 0
+				if bpm > 0 then
+					tup.t_start = (beat - lastBPMchangeBeat - totalWarpSinceBPMchange)/(bpm/60) + lastBPMchangeTime + total_delay
+				end
+				if currentFileBeat > tup[1] then
+					tup.start = math.huge
+					tup.t_start = math.huge
+				elseif tag == "BPMS" then
+					bpm = value
+					lastBPMchangeBeat = beat
+					lastBPMchangeTime = tup.t_start
+					totalWarpSinceBPMchange = 0
+				elseif tag == "STOPS" then
+					tup.dt = value
+					tup.length = value*bpm/60
+					total_delay = total_delay + value
+				elseif tag == "WARPS" then
+					tup.start = tup.start + value
+					tup.length = value
+					totalWarpSinceBPMchange = totalWarpSinceBPMchange + tup.length
+				end
+				tup.bpm = bpm
+			end
+
+			v.markers = markers
 		end
 	end
 

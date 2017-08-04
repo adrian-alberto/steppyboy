@@ -26,8 +26,13 @@ function love.load()
 	local currentSong = songs[tempSongIndex]
 	local src = love.audio.newSource("songs/"..currentSong.pathTitle.."/"..currentSong.meta.MUSIC, "stream")
 	love.audio.play(src)
+	src:seek(35)
 
 	local chart = currentSong.charts.Challenge
+
+	for i, v in pairs(chart.markers) do
+		print(v[3], v.start, v.t_start)
+	end
 
 	--break down the NOTES stuff
 	local notes = {{},{},{},{}} --4 separate note queues
@@ -57,53 +62,36 @@ function love.load()
 		i = i + 1
 	end
 
+
+
+
+
 	currentUI.NOTEDATA = notes --TEMPORARY AS FUCK
 
-	local noteContainer = ui.new(currentUI, "NoteContainer", {0,40,0,10},{0,20,0,200})
+	local noteContainer = ui.new(currentUI, "NoteContainer", {0,300,0,75},{0,20,0,20})
 	local bpm = 128--currentSong.meta.BPMS
 	local offset = tonumber(currentSong.meta.OFFSET)
 	local bps = bpm/60
 
 	function getCurrentBeat(src, chart)
-		local t = src:tell()
-		local beat, currentBPM
+		local t = src:tell() - chart.OFFSET
 
+		local beat = 0
+		local bpm = 0
 
-		if type(chart.BPMS) == "table" then
-			local latest = 0
-			local latestbpm
-			for offset, bpm in pairs(chart.BPMS) do
-				if offset <= t and offset >= latest then
-					latest = offset
-					latestbpm = bpm
+		for i, marker in pairs(chart.markers) do
+			if t >= marker.t_start then
+				bpm = marker.bpm
+				beat = marker.start + (t - marker.t_start)*bpm/60
+				
+				if marker[3] == "STOPS" and (t - marker.t_start) < marker.dt then
+					beat = marker.start
 				end
-			end
-			bpm = latestbpm
-			beat = (src:tell()-latest + chart.OFFSET)*latestbpm/60
-		else
-			bpm = chart.BPMS
-			beat = (src:tell() + chart.OFFSET)*(bpm)/60
-		end
-
-
-
-		--[[local tempbeat = beat
-		for offset, db in pairs(chart.WARPS) do
-			if tempbeat > offset then
-				tempbeat = tempbeat - db
-			end
-		end]]
-		--beat = tempbeat
-
-		local tempbeat = beat
-		for offset, sec in pairs(chart.STOPS) do
-			if beat > offset + sec*bpm/60 then
-				beat = beat - sec*bpm/60
-			elseif beat > offset then
-				beat = offset
+			else
+				break
 			end
 		end
-		--beat = tempbeat
+
 		return beat
 	end
 	for i = 1, 4 do
@@ -112,13 +100,18 @@ function love.load()
 		function noteCol:selfdraw(x,y,w,h)
 			local bOffset = -offset*bps
 			local currentBeat = getCurrentBeat(src, chart)
+
 			if i == 1 then
 				love.graphics.print(currentBeat, 10,10)
 			end
 
+			--DRAW NOTES IN THIS COLUMN
 			local notelist = self.parent.parent.NOTEDATA[i]
 			for _, note in pairs(notelist) do
 				love.graphics.circle("line", x+w/2, y+w/2 + (note.beat - currentBeat)*h, w/3)
+				if note.length then
+					love.graphics.line(x+w/2, y+w/2 + (note.beat - currentBeat)*h, x+w/2, y+w/2 + (note.beat - currentBeat + note.length)*h)
+				end
 			end
 		end
 	end
