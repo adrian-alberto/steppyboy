@@ -65,21 +65,10 @@ function song.parse(filepath)
 				local i = 0
 				for x in string.gmatch(value, "([%d%.=]+),?") do
 					local t, v = string.match(x, "([%d%.]+)=([%d%.]+)")
-					--v2[tonumber(t)] = tonumber(v)
-
 					--TUPLES:  {offset, value, tag}
 					table.insert(v2, {tonumber(t),tonumber(v), tag})
-					i = i + 1
 				end
-				--[[table.sort(v2, function(a, b)
-					return a[1] < b[1]
-				end)]]
 
-				--[[if i == 1 and tag == "BPMS" then
-					value = v2[next(v2)]
-				else
-					value = v2
-				end]]
 				value = v2
 			end
 			current[tag] = value
@@ -110,14 +99,11 @@ function song.parse(filepath)
 				end
 			end)
 
-			local actualOffset = 0
-			local currentFileBeat = 0
 			local bpm = 0
 			local lastBPMchangeBeat = 0
 			local lastBPMchangeTime = 0
 			local totalWarpSinceBPMchange = 0
-			local renderOffset = 0
-			local total_delay = 0
+			local totalDelay = 0
 			for _, tup in pairs(markers) do
 				local beat = tup[1]
 				local value = tup[2]
@@ -126,12 +112,9 @@ function song.parse(filepath)
 				tup.start = beat
 				tup.t_start = 0
 				if bpm > 0 then
-					tup.t_start = (beat - lastBPMchangeBeat - totalWarpSinceBPMchange)/(bpm/60) + lastBPMchangeTime + total_delay
+					tup.t_start = (beat - lastBPMchangeBeat - totalWarpSinceBPMchange)/(bpm/60) + lastBPMchangeTime + totalDelay
 				end
-				if currentFileBeat > tup[1] then
-					tup.start = math.huge
-					tup.t_start = math.huge
-				elseif tag == "BPMS" then
+				if tag == "BPMS" then
 					bpm = value
 					lastBPMchangeBeat = beat
 					lastBPMchangeTime = tup.t_start
@@ -139,7 +122,11 @@ function song.parse(filepath)
 				elseif tag == "STOPS" then
 					tup.dt = value
 					tup.length = value*bpm/60
-					total_delay = total_delay + value
+					totalDelay = totalDelay + value
+				elseif tag == "DELAYS" then
+					tup.dt = value
+					tup.length = value*bpm/60
+					totalDelay = totalDelay + value
 				elseif tag == "WARPS" then
 					tup.start = tup.start + value
 					tup.length = value
