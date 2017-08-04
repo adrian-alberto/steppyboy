@@ -3,7 +3,7 @@ require "ui"
 ssc = require("sscreader")
 
 local currentUI
-local tempSongIndex = 5
+local tempSongIndex = 3
 
 function love.load()
 	--temp
@@ -26,7 +26,7 @@ function love.load()
 	local currentSong = songs[tempSongIndex]
 	local src = love.audio.newSource("songs/"..currentSong.pathTitle.."/"..currentSong.meta.MUSIC, "stream")
 	love.audio.play(src)
-	src:seek(35)
+	--src:seek(35)
 
 	local chart = currentSong.charts.Challenge
 
@@ -38,14 +38,14 @@ function love.load()
 	local notes = {{},{},{},{}} --4 separate note queues
 
 	local i = 0 --measure index
-	for measure in string.gmatch(chart.NOTES, "(%d+),?") do
+	for measure in string.gmatch(chart.NOTES, "(%w+),?") do
 		local numrows = string.len(measure)/4
 		local j = 0
-		for rowstr in string.gmatch(measure, "%d%d%d%d") do
+		for rowstr in string.gmatch(measure, "%w%w%w%w") do
 			local beat = 4*i + 4*j/numrows
 
 			local col_index = 1
-			for note in string.gmatch(rowstr, "%d") do
+			for note in string.gmatch(rowstr, "%w") do
 				if note == "3" then
 					local prevnote = notes[col_index][#notes[col_index]]
 					if prevnote and prevnote.ntype == "2" or prevnote.ntype == "4" then
@@ -69,12 +69,10 @@ function love.load()
 	currentUI.NOTEDATA = notes --TEMPORARY AS FUCK
 
 	local noteContainer = ui.new(currentUI, "NoteContainer", {0,300,0,75},{0,20,0,20})
-	local bpm = 128--currentSong.meta.BPMS
-	local offset = tonumber(currentSong.meta.OFFSET)
-	local bps = bpm/60
+
 
 	function getCurrentBeat(src, chart)
-		local t = src:tell() - chart.OFFSET
+		local t = src:tell() + chart.OFFSET
 
 		local beat = 0
 		local bpm = 0
@@ -98,7 +96,6 @@ function love.load()
 		local noteCol = ui.new(noteContainer, i, {.25,0,4,0},{(i-1)*.25,0,0,0})
 		
 		function noteCol:selfdraw(x,y,w,h)
-			local bOffset = -offset*bps
 			local currentBeat = getCurrentBeat(src, chart)
 
 			if i == 1 then
@@ -108,6 +105,12 @@ function love.load()
 			--DRAW NOTES IN THIS COLUMN
 			local notelist = self.parent.parent.NOTEDATA[i]
 			for _, note in pairs(notelist) do
+				if note.ntype == "M" then
+					love.graphics.setColor(255,0,0)
+					print("bep")
+				else
+					love.graphics.setColor(255,255,255)
+				end
 				love.graphics.circle("line", x+w/2, y+w/2 + (note.beat - currentBeat)*h, w/3)
 				if note.length then
 					love.graphics.line(x+w/2, y+w/2 + (note.beat - currentBeat)*h, x+w/2, y+w/2 + (note.beat - currentBeat + note.length)*h)
