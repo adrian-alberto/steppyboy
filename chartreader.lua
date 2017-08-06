@@ -6,6 +6,7 @@ function ChartReader:init(songObj, difficulty)
 	self.src = love.audio.newSource("songs/"..songObj.pathTitle.."/"..songObj.meta.MUSIC, "stream")
 	self.chart = songObj.charts[difficulty] or error("No chart at this difficulty")
 	--self.src:seek(60)
+
 end
 
 
@@ -98,7 +99,7 @@ function ChartReader:loadNotes()
 					--we had a warp skip over this note
 				elseif marker.start <= beat then
 					evaltime = -self.chart.OFFSET + marker.t_start + (beat-marker.start)/(marker.bpm/60)
-					if marker[1] == "DELAYS" then
+					if marker[1] == "DELAYS" or marker[1] == "STOPS" and marker.start < beat then
 						evaltime = evaltime + marker.dt
 					end
 				else
@@ -139,6 +140,7 @@ function ChartReader:getCurrentBeat()
 	local bpm = 0
 	local speed = 1
 	local lastSpeed = 1
+	local beatSmear = 0 --How many beats held in a stop or delay (used for rendering during stop)
 
 	for i, marker in pairs(self.markers) do
 		if t >= marker.t_start then
@@ -146,8 +148,13 @@ function ChartReader:getCurrentBeat()
 			speed = marker.speed
 			beat = marker.start + (t - marker.t_start)*bpm/60
 			
-			if marker[1] == "STOPS" and (t - marker.t_start) < marker.dt then
-				beat = marker.start
+			if marker[1] == "STOPS" or marker[1] == "DELAYS" then
+				if (t - marker.t_start) < marker.dt then
+					beatSmear = beat - marker.start
+					beat = marker.start
+				else
+					beat = beat - marker.length
+				end
 			elseif marker[1] == "SPEEDS" and (beat-marker.start) < marker.length then
 				local alpha = (beat-marker.start)/marker.length
 				speed = alpha*(speed-lastSpeed) + lastSpeed
@@ -158,7 +165,7 @@ function ChartReader:getCurrentBeat()
 		lastSpeed = speed
 	end
 
-	return beat, speed
+	return beat, speed, beatSmear
 end
 
 function ChartReader:play()
