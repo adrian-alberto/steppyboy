@@ -84,69 +84,6 @@ function song.parse(filepath)
 		if v.STEPSTYPE == "dance-single" then
 			charts[v.DIFFICULTY] = v
 			setmetatable(v, {__index=meta})
-
-			--compute timing markers
-			local markers = {}
-			for mtype, _ in pairs(LISTTAGS) do
-				if v[mtype] then
-					for _, tup in pairs(v[mtype]) do
-						table.insert(markers, tup)
-					end
-				end
-			end
-			table.sort(markers, function(a, b)
-				--TUPLES:  {tag, offset, value, ...}
-				if a[2] == b[2] then
-					return LISTTAGS[a[1]] < LISTTAGS[b[1]]
-				else
-					return a[2] < b[2]
-				end
-			end)
-
-			local bpm = 0
-			local speed = 1
-			local lastBPMchangeBeat = 0
-			local lastBPMchangeTime = 0
-			local totalWarpSinceBPMchange = 0
-			local totalDelay = 0
-			for _, tup in pairs(markers) do
-				local beat = tup[2]
-				local value = tup[3]
-				local tag = tup[1]
-
-				tup.start = beat
-				tup.t_start = 0
-				if bpm > 0 then
-					tup.t_start = (beat - lastBPMchangeBeat - totalWarpSinceBPMchange)/(bpm/60) + lastBPMchangeTime + totalDelay
-				end
-				if tag == "BPMS" then
-					bpm = value
-					lastBPMchangeBeat = beat
-					lastBPMchangeTime = tup.t_start
-					totalWarpSinceBPMchange = 0
-				elseif tag == "SPEEDS" then
-					speed = value
-					local boolConvertToTime = (tup[5] == 1)
-					local rampUp = tup[4] or 0
-					tup.length = boolConvertToTime and rampUp/(bpm/60) or rampUp
-				elseif tag == "STOPS" then
-					tup.dt = value
-					tup.length = value*bpm/60
-					totalDelay = totalDelay + value
-				elseif tag == "DELAYS" then
-					tup.dt = value
-					tup.length = value*bpm/60
-					totalDelay = totalDelay + value
-				elseif tag == "WARPS" then
-					tup.start = tup.start + value
-					tup.length = value
-					totalWarpSinceBPMchange = totalWarpSinceBPMchange + tup.length
-				end
-				tup.bpm = bpm
-				tup.speed = speed
-			end
-
-			v.markers = markers
 		end
 	end
 

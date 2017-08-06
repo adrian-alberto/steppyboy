@@ -1,9 +1,11 @@
 require "oop"
 require "ui"
 ssc = require("sscreader")
+chartreader = require("chartreader")
 
 local currentUI
-local tempSongIndex = 3
+local tempSongIndex = 4
+local currentReader
 
 function love.load()
 	--temp
@@ -22,88 +24,22 @@ function love.load()
 	table.sort(songs, function(a, b)
 		return a.meta.ARTIST..a.meta.TITLE < b.meta.ARTIST..b.meta.TITLE
 	end)
-	currentUI = ui.new()
+
+	--TEMP, load single song
 	local currentSong = songs[tempSongIndex]
-	local src = love.audio.newSource("songs/"..currentSong.pathTitle.."/"..currentSong.meta.MUSIC, "stream")
-	love.audio.play(src)
-	src:seek(80)
+	currentReader = chartreader.new(currentSong, "Challenge")
+	currentReader:loadNotes()
 
-	local chart = currentSong.charts.Challenge
+	currentUI = ui.new()
+	currentUI.NOTEDATA = currentReader.notes --TEMPORARY AS FUCK
 
-	for i, v in pairs(chart.markers) do
-		print(v[1], v.start, v.speed, v.length)
-	end
+	local noteContainer = ui.new(currentUI, "NoteContainer", {0,100,0,25},{0,20,0,200})
 
-	--break down the NOTES stuff
-	local notes = {{},{},{},{}} --4 separate note queues
-
-	local i = 0 --measure index
-	for measure in string.gmatch(chart.NOTES, "(%w+),?") do
-		local numrows = string.len(measure)/4
-		local j = 0
-		for rowstr in string.gmatch(measure, "%w%w%w%w") do
-			local beat = 4*i + 4*j/numrows
-
-			local col_index = 1
-			for note in string.gmatch(rowstr, "%w") do
-				if note == "3" then
-					local prevnote = notes[col_index][#notes[col_index]]
-					if prevnote and prevnote.ntype == "2" or prevnote.ntype == "4" then
-						prevnote.length = beat - prevnote.beat
-					end
-				elseif note ~= "0" then
-					local noteObj = {ntype = note, beat = beat}
-					table.insert(notes[col_index], noteObj)
-				end
-				col_index = col_index + 1
-			end
-			j = j + 1
-		end
-		i = i + 1
-	end
-
-
-
-
-
-	currentUI.NOTEDATA = notes --TEMPORARY AS FUCK
-
-	local noteContainer = ui.new(currentUI, "NoteContainer", {0,20,0,5},{0,20,0,200})
-
-
-	function getCurrentBeat(src, chart)
-		local t = src:tell() + chart.OFFSET
-
-		local beat = 0
-		local bpm = 0
-		local speed = 1
-		local lastSpeed = 1
-
-		for i, marker in pairs(chart.markers) do
-			if t >= marker.t_start then
-				bpm = marker.bpm
-				speed = marker.speed
-				beat = marker.start + (t - marker.t_start)*bpm/60
-				
-				if marker[1] == "STOPS" and (t - marker.t_start) < marker.dt then
-					beat = marker.start
-				elseif marker[1] == "SPEEDS" and (beat-marker.start) < marker.length then
-					local alpha = (beat-marker.start)/marker.length
-					speed = alpha*(speed-lastSpeed) + lastSpeed
-				end
-			else
-				break
-			end
-			lastSpeed = speed
-		end
-
-		return beat, speed
-	end
 	for i = 1, 4 do
 		local noteCol = ui.new(noteContainer, i, {.25,0,4,0},{(i-1)*.25,0,0,0})
 		
 		function noteCol:selfdraw(x,y,w,h)
-			local currentBeat, currentSpeed = getCurrentBeat(src, chart)
+			local currentBeat, currentSpeed = currentReader:getCurrentBeat()
 
 			if i == 1 then
 				love.graphics.print(currentBeat, 10,10)
@@ -123,19 +59,21 @@ function love.load()
 					if note.length then
 						love.graphics.line(x+w/2, y+w/2 + (note.beat - currentBeat)*h*currentSpeed, x+w/2, y+w/2 + (note.beat - currentBeat + note.length)*h)
 					end
+
+
+				end
+				if note.evaltime then
+					love.graphics.circle("line", x+w/2+w*6, y+w/2 + (note.evaltime - currentReader.src:tell())*h*2, w/3)
 				end
 			end
 		end
 	end
 
 	function currentUI:selfdraw(x,y,w,h)
-		--[[for i, col in pairs(self.NOTEDATA) do
-			for _, note in pairs(col) do
-				love.graphics.circle("line", 8*i, 8*note.beat*4, 2)
-			end
-
-		end]]
 	end
+
+	currentReader:play()
+	currentReader.src:seek(80)
 
 end
 

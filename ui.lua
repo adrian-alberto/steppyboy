@@ -4,7 +4,6 @@ UI framework
 - Size and Pos tuples use ScaleX, ScaleY, AbsX, AbsY
 ]]
 
-
 ui = class()
 
 function ui:init(parent, tag, size, pos)
