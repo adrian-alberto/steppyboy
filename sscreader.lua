@@ -38,7 +38,7 @@ function song:init(dir)
 	self.charts = charts
 end
 
-function song.parse(filepath, fastMode)
+function song.parse(filepath)
 	local file, err = love.filesystem.newFile(filepath, "r")
 
 	--Squish contents together
@@ -58,10 +58,6 @@ function song.parse(filepath, fastMode)
 
 	for tag, value in string.gmatch(contents, "#(%w+):(.-);") do
 		if tag == "NOTEDATA" then
-			if fastMode then
-				file:close()
-				return meta
-			end
 			current = {}
 			table.insert(tempModes, current)
 		elseif value ~= "" then

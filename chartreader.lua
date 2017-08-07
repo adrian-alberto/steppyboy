@@ -5,8 +5,10 @@ local ChartReader = class()
 function ChartReader:init(songObj, difficulty)
 	self.src = love.audio.newSource("songs/"..songObj.pathTitle.."/"..songObj.meta.MUSIC, "stream")
 	self.chart = songObj.charts[difficulty] or error("No chart at this difficulty")
+	self.chart.OFFSET = self.chart.OFFSET - SETTINGS.calibration
 	--self.src:seek(60)
-
+	self.judgments = {}
+	self.latestNoteJudged = {1,1,1,1}
 end
 
 
@@ -172,11 +174,73 @@ function ChartReader:getCurrentBeat()
 	else
 		lastBeat = beat
 	end
-	return beat, speed, beatSmear
+	return beat, speed, beatSmear + SETTINGS.calibration
 end
 
 function ChartReader:play()
 	love.audio.play(self.src)
+end
+
+function ChartReader:press(noteIndex, t)
+	t = t or self.src:tell()
+
+	for i = self.latestNoteJudged[noteIndex], #self.notes[noteIndex] do
+		local note = self.notes[noteIndex][i]
+		if note.evaltime and not note.judged then
+			
+			local offset = (t - note.evaltime)
+			if math.abs(offset) <= .18 then
+				note.judged = offset --temp?
+				table.insert(self.judgments, 1, Judgment.new(math.floor(offset*1000)))
+				if #self.judgments > 5 then
+					self.judgments[6] = nil
+				end
+				self.latestNoteJudged[noteIndex] = i
+			elseif offset < -.18 then
+				--notes not ready to be judged yet
+
+				break
+			end
+		end
+	end
+end
+
+function ChartReader:release(noteIndex, t)
+	t = t or self.src:tell()
+	for i = self.latestNoteJudged[noteIndex], #self.notes[noteIndex] do
+		local note = self.notes[noteIndex][i]
+		if note.judged and note.ntype == "2" and not note.liftPercent then
+
+			local offset = (t-note.endevaltime)
+			note.liftPercent = (t-note.evaltime)/(note.endevaltime-note.evaltime)
+			if offset > -0.2 then
+				note.liftPercent = 1
+			end
+
+		end
+	end
+end
+
+
+Judgment = class()
+Judgment.thresholds = {
+	Marvelous = 23,
+	Perfect = 45,
+	Great = 90,
+	Good = 135,
+	Kinda = 180,
+}
+function Judgment:init(ms)
+	self.ms = ms
+	self.spawnTime = love.timer.getTime()
+	local bestOffset = 180
+	ms = math.abs(ms)
+	for name, offset in pairs(self.thresholds) do
+		if offset <= bestOffset and ms <= offset then
+			bestOffset = offset
+			self.text = name
+		end
+	end
 end
 
 

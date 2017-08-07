@@ -6,11 +6,14 @@ chartreader = require("chartreader")
 local currentUI
 local tempSongIndex = 1
 local currentReader
+SETTINGS = {
+	calibration = 0.125
+}
 
 function love.load()
 	math.randomseed(os.time())
 	--temp
-	local arrowimg = love.graphics.newImage("resources/arrow_outline_64.png")
+	local arrowimg = love.graphics.newImage("resources/arrow_screen_64.png")
 	love.audio.setVolume(0.1)
 
 	--LOAD THE SONGS IN
@@ -19,11 +22,11 @@ function love.load()
 
 
 	for i, title in pairs(songtitles) do
-		--if title == "Mei (Rockin' SWING Remix)" then
+		if title == "Roar" then
 			local songObject = ssc.song.new("songs/"..title)
 			songObject.pathTitle = title
 			table.insert(songs, songObject)
-		--end
+		end
 	end
 	--[[table.sort(songs, function(a, b)
 		return a.meta.ARTIST..a.meta.TITLE < b.meta.ARTIST..b.meta.TITLE
@@ -32,13 +35,15 @@ function love.load()
 
 	--TEMP, load single song
 	local currentSong = songs[tempSongIndex]
+	songs = nil
+	collectgarbage()
 	--currentSong.meta, currentSong.charts = ssc.song.parse(currentSong.sscFilePath)
 	currentReader = chartreader.new(currentSong, "Challenge")
 	currentReader:loadNotes()
 
 	currentUI = ui.new()
 	currentUI.NOTEDATA = currentReader.notes --TEMPORARY AS FUCK
-
+	currentUI.JUDGMENTS = currentReader.judgments
 	local noteContainer = ui.new(currentUI, "NoteContainer", {0,256,0,64},{0,20,0,60})
 	local angles = {-math.pi/2, math.pi, 0, math.pi/2}
 	local colors = {}
@@ -65,11 +70,11 @@ function love.load()
 			local currentBeat, currentSpeed, beatSmear = currentReader:getCurrentBeat()
 
 			if i == 1 then
-				love.graphics.print(currentBeat, 10,10,0,2)
-				love.graphics.print(currentReader.src:tell(), 10,40,0,2)
+				love.graphics.print(currentBeat, 10,10)
+				love.graphics.print(currentReader.src:tell(), 10,30)
 			end
 
-			love.graphics.setBlendMode("alpha")
+			love.graphics.setBlendMode("screen")
 			--targets
 			local beatAlpha = (currentBeat+beatSmear)%1
 			local tcolor = 125 - beatAlpha*100
@@ -95,25 +100,47 @@ function love.load()
 
 					local NOTEX = math.floor(x + w/2)
 					local NOTEY_0 =  y+w/2 + (note.beat - currentBeat)*h*currentSpeed
-					
-					love.graphics.draw(arrowimg, NOTEX, NOTEY_0, angles[i], w/64,w/64,32,32)
-					if note.length then
+					if not note.judged and not note.length then
+						--draw a normal note
+						love.graphics.draw(arrowimg, NOTEX, NOTEY_0, angles[i], w/64,w/64,32,32)
+					end
+					if note.length and not note.liftPercent then
 						local NOTEY_1 = math.floor(NOTEY_0 + note.length*h*currentSpeed)
-						love.graphics.line(x, NOTEY_0, x, NOTEY_1)
-						love.graphics.line(x+w, NOTEY_0, x+w, NOTEY_1)
-						love.graphics.line(x, NOTEY_1, NOTEX, NOTEY_1 + w/2)
-						love.graphics.line(x+w, NOTEY_1, NOTEX, NOTEY_1 + w/2)
+						if note.judged then
+							NOTEY_0 = y+w/2
+							if note.length + note.beat < currentBeat then
+								note.liftPercent = 1
+								--TODO: probably send a message to OK the judgment?
+							end
+						end
+						if not note.liftPercent then
+							love.graphics.draw(arrowimg, NOTEX, NOTEY_0, angles[i], w/64,w/64,32,32)
+							
+							love.graphics.line(x, NOTEY_0, x, NOTEY_1)
+							love.graphics.line(x+w, NOTEY_0, x+w, NOTEY_1)
+							love.graphics.line(x, NOTEY_1, NOTEX, NOTEY_1 + w/2)
+							love.graphics.line(x+w, NOTEY_1, NOTEX, NOTEY_1 + w/2)
+						end
 					end
 
 
 				end
 				if note.evaltime then
 					love.graphics.circle("line", x+w/2+w*6, y+w/2 + (note.evaltime - currentReader.src:tell())*h*3, w/3)
-					love.graphics.print(note.beat, x+w/2+w*6, y+w/2 + (note.evaltime - currentReader.src:tell())*h*3,0,2)
 				end
 			end
 			love.graphics.setBlendMode("alpha")
 		end
+	end
+
+	local judgeContainer = ui.new(noteContainer, "judgeContainer", {1,0,0,0},{0,0,0,256})
+	function judgeContainer:selfdraw(x,y,w,h)
+		local judgments = self.parent.parent.JUDGMENTS
+		for i, judgment in pairs(judgments) do
+			love.graphics.setColor(255,255,255)
+			love.graphics.printf(judgment.text,x,y+i*20, w, "center")
+		end
+
 	end
 
 	function currentUI:selfdraw(x,y,w,h)
@@ -122,17 +149,34 @@ function love.load()
 	end
 
 	currentReader:play()
-	--currentReader.src:seek(80)
+	--currentReader.src:seek(60)
 
 
 end
 
 
- 
+local gameTime = 0
 function love.update(dt)
-
-
+	gameTime = love.timer.getTime()
 end
+
+local keyTranslate = {left = 1, down = 2, up = 3, right = 4}
+function love.keypressed(key)
+	if currentReader then
+		if keyTranslate[key] then
+			currentReader:press(keyTranslate[key])
+		end
+	end
+end
+
+function love.keyreleased(key)
+	if currentReader then
+		if keyTranslate[key] then
+			currentReader:release(keyTranslate[key])
+		end
+	end
+end
+
 
 function love.draw()
 	local width, height = love.window.getMode()
