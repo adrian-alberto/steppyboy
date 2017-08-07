@@ -4,12 +4,13 @@ ssc = require("sscreader")
 chartreader = require("chartreader")
 
 local currentUI
-local tempSongIndex = 5
+local tempSongIndex = 1
 local currentReader
 
 function love.load()
+	math.randomseed(os.time())
 	--temp
-	local arrowimg = love.graphics.newImage("resources/arrow_screen_64.png")
+	local arrowimg = love.graphics.newImage("resources/arrow_outline_64.png")
 	love.audio.setVolume(0.1)
 
 	--LOAD THE SONGS IN
@@ -18,23 +19,27 @@ function love.load()
 
 
 	for i, title in pairs(songtitles) do
-		local songObject = ssc.song.new("songs/"..title)
-		songObject.pathTitle = title
-		table.insert(songs, songObject)
+		--if title == "Mei (Rockin' SWING Remix)" then
+			local songObject = ssc.song.new("songs/"..title)
+			songObject.pathTitle = title
+			table.insert(songs, songObject)
+		--end
 	end
-	table.sort(songs, function(a, b)
+	--[[table.sort(songs, function(a, b)
 		return a.meta.ARTIST..a.meta.TITLE < b.meta.ARTIST..b.meta.TITLE
-	end)
+	end)]]
+	tempSongIndex = math.random(1, #songs)
 
 	--TEMP, load single song
 	local currentSong = songs[tempSongIndex]
+	--currentSong.meta, currentSong.charts = ssc.song.parse(currentSong.sscFilePath)
 	currentReader = chartreader.new(currentSong, "Challenge")
 	currentReader:loadNotes()
 
 	currentUI = ui.new()
 	currentUI.NOTEDATA = currentReader.notes --TEMPORARY AS FUCK
 
-	local noteContainer = ui.new(currentUI, "NoteContainer", {0,256,0,64},{0,20,0,20})
+	local noteContainer = ui.new(currentUI, "NoteContainer", {0,256,0,64},{0,20,0,60})
 	local angles = {-math.pi/2, math.pi, 0, math.pi/2}
 	local colors = {}
 	colors[4] = {244, 67, 54} --#F44336
@@ -60,10 +65,11 @@ function love.load()
 			local currentBeat, currentSpeed, beatSmear = currentReader:getCurrentBeat()
 
 			if i == 1 then
-				love.graphics.print(currentBeat, 10,10)
+				love.graphics.print(currentBeat, 10,10,0,2)
+				love.graphics.print(currentReader.src:tell(), 10,40,0,2)
 			end
 
-			love.graphics.setBlendMode("screen")
+			love.graphics.setBlendMode("alpha")
 			--targets
 			local beatAlpha = (currentBeat+beatSmear)%1
 			local tcolor = 125 - beatAlpha*100
@@ -87,12 +93,12 @@ function love.load()
 						end
 					end
 
-					local NOTEX = x + w/2
+					local NOTEX = math.floor(x + w/2)
 					local NOTEY_0 =  y+w/2 + (note.beat - currentBeat)*h*currentSpeed
 					
-					love.graphics.draw(arrowimg, NOTEX, NOTEY_0, angles[i], 1,1,32,32)
+					love.graphics.draw(arrowimg, NOTEX, NOTEY_0, angles[i], w/64,w/64,32,32)
 					if note.length then
-						local NOTEY_1 = NOTEY_0 + note.length*h*currentSpeed
+						local NOTEY_1 = math.floor(NOTEY_0 + note.length*h*currentSpeed)
 						love.graphics.line(x, NOTEY_0, x, NOTEY_1)
 						love.graphics.line(x+w, NOTEY_0, x+w, NOTEY_1)
 						love.graphics.line(x, NOTEY_1, NOTEX, NOTEY_1 + w/2)
@@ -102,7 +108,8 @@ function love.load()
 
 				end
 				if note.evaltime then
-					love.graphics.circle("line", x+w/2+w*6, y+w/2 + (note.evaltime - currentReader.src:tell())*h*2, w/3)
+					love.graphics.circle("line", x+w/2+w*6, y+w/2 + (note.evaltime - currentReader.src:tell())*h*3, w/3)
+					love.graphics.print(note.beat, x+w/2+w*6, y+w/2 + (note.evaltime - currentReader.src:tell())*h*3,0,2)
 				end
 			end
 			love.graphics.setBlendMode("alpha")
@@ -115,7 +122,7 @@ function love.load()
 	end
 
 	currentReader:play()
-	currentReader.src:seek(80)
+	--currentReader.src:seek(80)
 
 
 end

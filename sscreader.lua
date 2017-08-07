@@ -32,12 +32,13 @@ function song:init(dir)
 	if not sscFilePath then error("Missing .ssc: " .. dir) end
 
 	--Read and parse file
+	self.sscFilePath = sscFilePath
 	local meta, charts = song.parse(sscFilePath)
 	self.meta = meta
 	self.charts = charts
 end
 
-function song.parse(filepath)
+function song.parse(filepath, fastMode)
 	local file, err = love.filesystem.newFile(filepath, "r")
 
 	--Squish contents together
@@ -57,6 +58,10 @@ function song.parse(filepath)
 
 	for tag, value in string.gmatch(contents, "#(%w+):(.-);") do
 		if tag == "NOTEDATA" then
+			if fastMode then
+				file:close()
+				return meta
+			end
 			current = {}
 			table.insert(tempModes, current)
 		elseif value ~= "" then

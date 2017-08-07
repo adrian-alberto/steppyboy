@@ -44,16 +44,19 @@ function ChartReader:loadNotes()
 		local value = tup[3]
 		local tag = tup[1]
 
+
 		tup.start = beat
 		tup.t_start = 0
 		if bpm > 0 then
 			tup.t_start = (beat - lastBPMchangeBeat - totalWarpSinceBPMchange)/(bpm/60) + lastBPMchangeTime + totalDelay
 		end
 		if tag == "BPMS" then
+			
 			bpm = value
 			lastBPMchangeBeat = beat
 			lastBPMchangeTime = tup.t_start
 			totalWarpSinceBPMchange = 0
+			totalDelay = 0
 		elseif tag == "SPEEDS" then
 			speed = value
 			local boolConvertToTime = (tup[5] == 1)
@@ -108,9 +111,7 @@ function ChartReader:loadNotes()
 			end
 
 
-			--AAAAAAAAAAAA
-
-
+			--Calculate note-related metadata using markers
 			local col_index = 1
 			for note in string.gmatch(rowstr, "%w") do
 				if note == "3" then
@@ -132,7 +133,8 @@ function ChartReader:loadNotes()
 
 	self.notes = notes
 end
-
+local finalmarker
+local lastBeat = 0
 function ChartReader:getCurrentBeat()
 	local t = self.src:tell() + self.chart.OFFSET
 
@@ -147,6 +149,7 @@ function ChartReader:getCurrentBeat()
 			bpm = marker.bpm
 			speed = marker.speed
 			beat = marker.start + (t - marker.t_start)*bpm/60
+			fm2 = marker
 			
 			if marker[1] == "STOPS" or marker[1] == "DELAYS" then
 				if (t - marker.t_start) < marker.dt then
@@ -160,11 +163,15 @@ function ChartReader:getCurrentBeat()
 				speed = alpha*(speed-lastSpeed) + lastSpeed
 			end
 		else
-			break
+			--break
 		end
 		lastSpeed = speed
 	end
-
+	if beat >= lastBeat then
+		lastBeat = beat
+	else
+		lastBeat = beat
+	end
 	return beat, speed, beatSmear
 end
 
