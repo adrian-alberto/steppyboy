@@ -3,6 +3,7 @@ local LISTTAGS = {BPMS = 1, SPEEDS = 2, DELAYS = 3, STOPS = 5, WARPS = 6}
 local ChartReader = class()
 
 function ChartReader:init(songObj, difficulty)
+	self.song = songObj
 	self.src = love.audio.newSource("songs/"..songObj.pathTitle.."/"..songObj.meta.MUSIC, "stream")
 	self.chart = songObj.charts[difficulty] or error("No chart at this difficulty")
 	self.chart.OFFSET = self.chart.OFFSET - SETTINGS.calibration
@@ -196,6 +197,7 @@ function ChartReader:press(noteIndex, t)
 					self.judgments[6] = nil
 				end
 				self.latestNoteJudged[noteIndex] = i
+				break
 			elseif offset < -.18 then
 				--notes not ready to be judged yet
 
