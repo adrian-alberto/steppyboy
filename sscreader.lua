@@ -33,6 +33,7 @@ function song:init(dir)
 
 	--Read and parse file
 	self.sscFilePath = sscFilePath
+	self.dir = dir
 	local meta, charts = song.parse(sscFilePath)
 	self.meta = meta
 	self.charts = charts

@@ -4,7 +4,7 @@ local ChartReader = class()
 
 function ChartReader:init(songObj, difficulty)
 	self.song = songObj
-	self.src = love.audio.newSource("songs/"..songObj.pathTitle.."/"..songObj.meta.MUSIC, "stream")
+	self.src = love.audio.newSource(songObj.dir.."/"..songObj.meta.MUSIC, "stream")
 	self.chart = songObj.charts[difficulty] or error("No chart at this difficulty")
 	self.chart.OFFSET = self.chart.OFFSET - SETTINGS.calibration
 	--self.src:seek(60)

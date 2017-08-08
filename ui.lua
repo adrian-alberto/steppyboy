@@ -12,6 +12,7 @@ function ui:init(parent, tag, size, pos)
 	self.size = size or {1,0,1,0}
 	self.pos = pos or {0,0,0,0}
 	self.children = {}
+	self.autocull = false
 
 	if parent and tag then
 		parent.children[tag] = self
@@ -22,13 +23,20 @@ end
 
 function ui:draw(px, py, pw, ph)
 	--Takes parent coordinates and size
-	local abs_x = px + self.pos[2] + self.pos[1]*pw
-	local abs_y = py + self.pos[4] + self.pos[3]*ph
-	local abs_w = self.size[2] + self.size[1]*pw
-	local abs_h = self.size[4] + self.size[3]*ph
+	local abs_x = math.floor(0.5 + px + self.pos[2] + self.pos[1]*pw)
+	local abs_y = math.floor(0.5 + py + self.pos[4] + self.pos[3]*ph)
+	local abs_w = math.floor(0.5 + self.size[2] + self.size[1]*pw)
+	local abs_h = math.floor(0.5 + self.size[4] + self.size[3]*ph)
 
 	--incase selfdraw clips descendants
 	local sx, sy, sw, sh = love.graphics.getScissor()
+
+	if self.autocull then
+		local w, h = love.window.getMode()
+		if abs_x < -abs_w or abs_y < -abs_h or abs_x > w or abs_y > h then
+			return
+		end
+	end
 
 	--draw self
 	if self.selfdraw then

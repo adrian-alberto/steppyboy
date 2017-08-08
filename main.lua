@@ -3,6 +3,7 @@ require "ui"
 local ssc = require("sscreader")
 local chartreader = require("chartreader")
 local gameui = require("gameui")
+local menuui = require("menu")
 
 SETTINGS = {
 	calibration = 0.125,
@@ -22,12 +23,11 @@ function love.load()
 	--LOAD THE SONGS IN
 	local songtitles = love.filesystem.getDirectoryItems("songs")
 	for _, title in ipairs(songtitles) do
-		print(title)
 		songtitles[title] = true
 	end
 
 
-	local songs = {}
+	local songfastdata = {}
 
 	local function combineStr(tab)
 		local line = ""
@@ -66,7 +66,7 @@ function love.load()
 					local songRemoved = false
 					--break down into categories
 					local lsplit = {}
-					for x in string.gmatch(line, "[^\t]+") do
+					for x in string.gmatch(line, "([^\t]*)\t?") do
 						table.insert(lsplit, x)
 					end
 					local songtitle = get(lsplit, "folder")
@@ -85,14 +85,18 @@ function love.load()
 					if not songRemoved then
 						--Copy to other file in case we have to rewrite
 						tempFileStr = tempFileStr..line
-						songs[songtitle] = true --temp, put more information here later
+						local data = {}
+						for i, label in pairs(cacheTemplate) do
+							data[label] = lsplit[i]
+						end
+						songfastdata[songtitle] = data --temp, put more information here later
 					end
 				end
 			end
 
 			--add new songs (found in directory but not in the cache)
 			for _, title in ipairs(songtitles) do
-				if not songs[title] then
+				if not songfastdata[title] then
 					print("Adding " .. title .. "...")
 					local song = ssc.song.new("songs/"..title)
 
@@ -107,11 +111,11 @@ function love.load()
 						title,
 						song.sscFilePath,
 						love.filesystem.getLastModified(song.sscFilePath),
-						song.meta.TITLE,
-						song.meta.SUBTITLE,
-						song.meta.ARTIST,
-						song.meta.BANNER,
-						song.meta.JACKET,
+						song.meta.TITLE or "",
+						song.meta.SUBTITLE or "",
+						song.meta.ARTIST or "",
+						song.meta.BANNER or "",
+						song.meta.JACKET or "",
 						chartTxt,
 					}
 					local line = ""
@@ -139,23 +143,26 @@ function love.load()
 		end
 	end
 
-
-
-	--[[for i, title in pairs(songtitles) do
-		if title == "Roar" then
-			local songObject = ssc.song.new("songs/"..title)
-			songObject.pathTitle = title
-			table.insert(songs, songObject)
+	local sfdata2 = {}
+	for title, data in pairs(songfastdata) do
+		table.insert(sfdata2, data)
+		if #sfdata2 > 80 then
+			--break
 		end
-	end]]
-	--[[table.sort(songs, function(a, b)
-		return a.meta.ARTIST..a.meta.TITLE < b.meta.ARTIST..b.meta.TITLE
-	end)]]
-	tempSongIndex = math.random(1, #songs)
+	end
+	table.sort(sfdata2, function(a, b)
+		return a.ARTIST..a.TITLE < b.ARTIST..b.TITLE
+		--return a.TITLE..a.ARTIST < b.TITLE..b.ARTIST
+	end)
+	
+	--load main menu
+	--currentUI = menuui.build(sfdata2)
 
 	--TEMP, load single song
-	--[[
-	local currentSong = songs[tempSongIndex]
+	--
+	--local data = songfastdata["MechaTribe Assault"]
+	local data = sfdata2[math.random(1,#sfdata2)]
+	local currentSong = ssc.song.new("songs/"..data.folder)
 	currentReader = chartreader.new(currentSong, "Challenge")
 	currentReader:loadNotes()
 	currentUI = gameui.build(currentReader)
