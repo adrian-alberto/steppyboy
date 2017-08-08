@@ -5,7 +5,8 @@ local chartreader = require("chartreader")
 local gameui = require("gameui")
 
 SETTINGS = {
-	calibration = 0.125
+	calibration = 0.125,
+	mastervolume = 0.1,
 }
 
 local currentUI
@@ -15,33 +16,151 @@ local currentReader
 
 function love.load()
 	math.randomseed(os.time())
-	--temp
 
-	love.audio.setVolume(0.1)
+	love.audio.setVolume(SETTINGS.mastervolume)
 
 	--LOAD THE SONGS IN
 	local songtitles = love.filesystem.getDirectoryItems("songs")
+	for _, title in ipairs(songtitles) do
+		print(title)
+		songtitles[title] = true
+	end
+
+
 	local songs = {}
 
+	local function combineStr(tab)
+		local line = ""
+		for i, v in pairs(tab) do
+			if i ~= #tab then
+				line = line .. v .. "\t"
+			else
+				line = line .. v .. "\n"
+			end
+		end
+		return line
+	end
 
-	for i, title in pairs(songtitles) do
+	do --Read the song cache, rewrite if necessary
+		local cacheTemplate = {"folder","gamefile","updated","TITLE","SUBTITLE","ARTIST","BANNER","JACKET", "CHARTS"}
+		local headerStr = combineStr(cacheTemplate)
+		local tempFileStr = headerStr
+		local requireWrite = false --Flag, must overwrite cache file.
+		local cacheFile, err = love.filesystem.newFile("songcache.txt", "r")
+
+		if not err then
+			--get indices for the template
+			for i, v in ipairs(cacheTemplate) do
+				cacheTemplate[v] = i
+			end
+
+			local function get(tab, label)
+				return tab[cacheTemplate[label]]
+			end
+
+			--validate cache first
+			for line in cacheFile:lines() do
+				if line.."\n" == headerStr then
+					--header, do nothing
+				else
+					local songRemoved = false
+					--break down into categories
+					local lsplit = {}
+					for x in string.gmatch(line, "[^\t]+") do
+						table.insert(lsplit, x)
+					end
+					local songtitle = get(lsplit, "folder")
+					local gamefile = get(lsplit, "gamefile")
+
+					if not songtitles[songtitle] then
+						requireWrite = true
+						songRemoved = true
+					elseif not love.filesystem.exists(gamefile) then
+						requireWrite = true
+						songRemoved = true
+					elseif false then
+						--file is mis-dated
+					end
+
+					if not songRemoved then
+						--Copy to other file in case we have to rewrite
+						tempFileStr = tempFileStr..line
+						songs[songtitle] = true --temp, put more information here later
+					end
+				end
+			end
+
+			--add new songs (found in directory but not in the cache)
+			for _, title in ipairs(songtitles) do
+				if not songs[title] then
+					print("Adding " .. title .. "...")
+					local song = ssc.song.new("songs/"..title)
+
+					--{"folder","gamefile","updated","TITLE","SUBTITLE","ARTIST","BANNER","JACKET", "CHARTS"}
+					local chartTxt = ""
+
+					for difficulty, chart in pairs(song.charts) do
+						chartTxt = chartTxt .. difficulty .. ":" .. chart.METER .. ":" .. (chart.CREDIT or "") .. ";"
+					end
+
+					local lsplit = {
+						title,
+						song.sscFilePath,
+						love.filesystem.getLastModified(song.sscFilePath),
+						song.meta.TITLE,
+						song.meta.SUBTITLE,
+						song.meta.ARTIST,
+						song.meta.BANNER,
+						song.meta.JACKET,
+						chartTxt,
+					}
+					local line = ""
+					for i, v in pairs(lsplit) do
+						if i == #lsplit then
+							line = line .. tostring(v) .. "\n"
+						else
+							line = line .. tostring(v) .. "\t"
+						end
+					end
+					tempFileStr = tempFileStr..line
+					song = nil
+					requireWrite = true
+				end
+			end
+		else
+			requireWrite = true
+		end
+
+		if requireWrite then
+			cacheFile:close()
+			local newFile, err = love.filesystem.newFile("songcache.txt","w")
+			newFile:write(tempFileStr)
+			newFile:close()
+		end
+	end
+
+
+
+	--[[for i, title in pairs(songtitles) do
 		if title == "Roar" then
 			local songObject = ssc.song.new("songs/"..title)
 			songObject.pathTitle = title
 			table.insert(songs, songObject)
 		end
-	end
+	end]]
 	--[[table.sort(songs, function(a, b)
 		return a.meta.ARTIST..a.meta.TITLE < b.meta.ARTIST..b.meta.TITLE
 	end)]]
 	tempSongIndex = math.random(1, #songs)
 
 	--TEMP, load single song
+	--[[
 	local currentSong = songs[tempSongIndex]
 	currentReader = chartreader.new(currentSong, "Challenge")
 	currentReader:loadNotes()
 	currentUI = gameui.build(currentReader)
 	currentReader:play()
+	--]]
 	--currentReader.src:seek(60)
 
 
