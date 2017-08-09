@@ -1,6 +1,7 @@
-local arrowimg = love.graphics.newImage("resources/arrow_screen_64.png")
+local arrowimg = love.graphics.newImage("resources/arrow_outline_64.png")
 function buildGameUI(reader)
 	local gameUI = ui.new()
+	gameUI.tag = "Game"
 	gameUI.NOTEDATA = reader.notes --TEMPORARY AS FUCK
 	gameUI.JUDGMENTS = reader.judgments
 	local noteContainer = ui.new(gameUI, "NoteContainer", {0,256,0,64},{0,20,0,60})
@@ -24,15 +25,26 @@ function buildGameUI(reader)
 			local currentBeat, currentSpeed, beatSmear = reader:getCurrentBeat()
 
 			if i == 1 then
+				love.graphics.setColor(90,90,90)
 				love.graphics.print(currentBeat, 10,10)
 				love.graphics.print(reader.src:tell(), 10,30)
+				if #reader.judgments > 0 then
+					local temp = {}
+					for j = 1, #reader.judgments do
+						table.insert(temp, reader.judgments[j].ms)
+					end
+					table.sort(temp)
+
+
+					love.graphics.print(temp[math.ceil(#temp/2)],200,10)
+				end
 			end
 
-			love.graphics.setBlendMode("screen")
+			love.graphics.setBlendMode("alpha")
 			--targets
 			local beatAlpha = (currentBeat+beatSmear)%1
 			local tcolor = 125 - beatAlpha*100
-			love.graphics.setColor(tcolor,tcolor,tcolor)
+			love.graphics.setColor(tcolor+16,tcolor+24,tcolor+47)
 			love.graphics.draw(arrowimg, x+w/2, y+w/2, angles[i], 1-beatAlpha/10,1-beatAlpha/10,32,32)
 			--DRAW NOTES IN THIS COLUMN
 			local notelist = self.parent.parent.NOTEDATA[i]
@@ -46,7 +58,7 @@ function buildGameUI(reader)
 						local current = 1000
 						for divisor, color in pairs(colors) do
 							if divisor < current and ((note.beat)*divisor/4) % (1) == 0 then
-								love.graphics.setColor(color[1],color[2],color[3])
+								love.graphics.setColor(color[1]+16,color[2]+24,color[3]+48)
 								current = divisor
 							end
 						end
@@ -91,6 +103,9 @@ function buildGameUI(reader)
 	function judgeContainer:selfdraw(x,y,w,h)
 		local judgments = self.parent.parent.JUDGMENTS
 		for i, judgment in pairs(judgments) do
+			if i > 5 then
+				break
+			end
 			
 			if i == 1 then
 				love.graphics.setColor(200,255,200)
@@ -104,7 +119,8 @@ function buildGameUI(reader)
 	end
 
 	function gameUI:selfdraw(x,y,w,h)
-		love.graphics.setColor(20,30,60,200)
+		--love.graphics.setColor(20,30,60,200)
+		love.graphics.setColor(30,30,30)
 		love.graphics.rectangle("fill",x,y,w,h)
 	end
 

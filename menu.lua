@@ -1,18 +1,73 @@
 	--TODO: MENU STUFF. MOVE TO DIFFERENT FILE LATER
+local ssc = require("sscreader")
 function buildMainMenu(songdata)
-	local SONGINDEX = 2
+	local SONGINDEX = 1
 	local difficulties = {"Beginner", "Easy", "Medium", "Hard", "Challenge"}
 	local gridWidth = math.ceil(math.sqrt(#songdata))
 
 	local mainMenu = ui.new()
+	mainMenu.tag = "SongSelect"
 	function mainMenu:selfdraw(x, y, w, h)
 		love.graphics.setColor(30,30,30)
 		love.graphics.rectangle("fill",x,y,w,h)
 	end
 
+
+
+
 	local songContainer = ui.new(mainMenu, "songContainer", {0,210,0,210},{0.5,-210,0.5,-105})
-	songContainer.autocull = true
+	
 	function songContainer:selfdraw()
+	end
+
+	local menuSong
+	local function switchSong(newIndex)
+		SONGINDEX = newIndex
+		local gx = ((SONGINDEX-1) % gridWidth)
+		local gy = math.floor((SONGINDEX-1) /gridWidth)
+		--mainMenu.children.songContainer.pos = {0.5,-gx*210-210,0.5,-gy*210-105}
+		songContainer:tween(songContainer.size, {0.5,-gx*210-210,0.5,-gy*210-105}, 0.3)
+		local tempsong = songdata[SONGINDEX]
+		if menuSong then
+			love.audio.stop(menuSong)
+		end
+		local srcpath = "songs/"..tempsong.folder.."/"..tempsong.MUSIC
+		if love.filesystem.isFile(srcpath) then
+			--menuSong = love.audio.newSource(srcpath, "stream")
+			
+			--love.audio.play(menuSong)
+			--menuSong:seek(tempsong.SAMPLESTART)
+		end
+		tempsong = nil
+	end
+	switchSong(1)
+	function mainMenu:keypressed(key)
+		local gx = ((SONGINDEX-1) % gridWidth)
+		local gy = math.floor((SONGINDEX-1) /gridWidth)
+		if key == "right" then
+			gx = (gx + 1) % gridWidth
+		elseif key == "left" then
+			gx = (gx - 1) % gridWidth
+		elseif key == "down" then
+			gy = (gy + 1) % gridWidth
+		elseif key == "up" then
+			gy = (gy - 1) % gridWidth
+		else
+			return
+		end
+		local newIndex = gx + gy*gridWidth + 1
+		if newIndex > #songdata then
+			if key == "right" then
+				newIndex = gridWidth*gridWidth - gridWidth + 1
+			elseif key == "left" then
+				newIndex = #songdata
+			elseif key == "down" then
+				newIndex = gx + 1
+			elseif key == "up" then
+				newIndex = newIndex - gridWidth
+			end
+		end
+		switchSong(newIndex)
 	end
 
 	for i, data in ipairs(songdata) do
@@ -20,6 +75,7 @@ function buildMainMenu(songdata)
 		local gy = math.floor((i-1) /gridWidth)
 		local title = data.TITLE
 		local songui = ui.new(songContainer, i, {1,-10,1,-10}, {gx,0,gy,0})
+		songui.autocull = true
 		function songui:selfdraw(x,y,w,h)
 			love.graphics.setColor(0,0,0,60)
 			love.graphics.rectangle("fill", x-3,y-3,w+6,h+10)

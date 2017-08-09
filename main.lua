@@ -6,7 +6,7 @@ local gameui = require("gameui")
 local menuui = require("menu")
 
 SETTINGS = {
-	calibration = 0.125,
+	calibration = 0.125, -- 0.125 + or - 13
 	mastervolume = 0.1,
 }
 
@@ -42,7 +42,7 @@ function love.load()
 	end
 
 	do --Read the song cache, rewrite if necessary
-		local cacheTemplate = {"folder","gamefile","updated","TITLE","SUBTITLE","ARTIST","BANNER","JACKET", "CHARTS"}
+		local cacheTemplate = {"folder","gamefile","updated","TITLE","SUBTITLE","ARTIST","BANNER","JACKET","MUSIC","SAMPLESTART", "CHARTS"}
 		local headerStr = combineStr(cacheTemplate)
 		local tempFileStr = headerStr
 		local requireWrite = false --Flag, must overwrite cache file.
@@ -89,7 +89,7 @@ function love.load()
 						for i, label in pairs(cacheTemplate) do
 							data[label] = lsplit[i]
 						end
-						songfastdata[songtitle] = data --temp, put more information here later
+						songfastdata[songtitle] = data
 					end
 				end
 			end
@@ -116,6 +116,8 @@ function love.load()
 						song.meta.ARTIST or "",
 						song.meta.BANNER or "",
 						song.meta.JACKET or "",
+						song.meta.MUSIC,
+						song.meta.SAMPLESTART or "0",
 						chartTxt,
 					}
 					local line = ""
@@ -129,6 +131,13 @@ function love.load()
 					tempFileStr = tempFileStr..line
 					song = nil
 					requireWrite = true
+
+					--Don't forget to add it to the data lol
+					local data = {}
+					for i, label in pairs(cacheTemplate) do
+						data[label] = lsplit[i]
+					end
+					songfastdata[title] = data
 				end
 			end
 		else
@@ -156,12 +165,12 @@ function love.load()
 	end)
 	
 	--load main menu
-	--currentUI = menuui.build(sfdata2)
+	currentUI = menuui.build(sfdata2)
 
 	--TEMP, load single song
-	--
-	--local data = songfastdata["MechaTribe Assault"]
-	local data = sfdata2[math.random(1,#sfdata2)]
+	--[[
+	local data = songfastdata["Marvin Gaye"]
+	--local data = sfdata2[math.random(1,#sfdata2)]
 	local currentSong = ssc.song.new("songs/"..data.folder)
 	currentReader = chartreader.new(currentSong, "Challenge")
 	currentReader:loadNotes()
@@ -185,6 +194,8 @@ function love.keypressed(key)
 		if keyTranslate[key] then
 			currentReader:press(keyTranslate[key])
 		end
+	elseif currentUI.tag == "SongSelect" then
+		currentUI:keypressed(key)
 	end
 end
 
@@ -199,7 +210,7 @@ end
 
 function love.draw()
 	local width, height = love.window.getMode()
-	love.graphics.setBackgroundColor(255, 255, 255)
+	--love.graphics.setBackgroundColor(255, 255, 255)
 	love.graphics.setColor(255,255,255)
 	if currentUI then
 		currentUI:draw(0,0,width,height)

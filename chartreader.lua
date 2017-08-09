@@ -193,9 +193,7 @@ function ChartReader:press(noteIndex, t)
 			if math.abs(offset) <= .18 then
 				note.judged = offset --temp?
 				table.insert(self.judgments, 1, Judgment.new(math.floor(offset*1000)))
-				if #self.judgments > 5 then
-					self.judgments[6] = nil
-				end
+
 				self.latestNoteJudged[noteIndex] = i
 				break
 			elseif offset < -.18 then
@@ -226,7 +224,7 @@ end
 
 Judgment = class()
 Judgment.thresholds = {
-	Marvelous = 23,
+	Marvelous = 30,
 	Perfect = 45,
 	Great = 90,
 	Good = 135,
