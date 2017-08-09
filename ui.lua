@@ -104,4 +104,25 @@ function debugdraw(x,y,w,h)
 	love.graphics.setColor(255,255,255)
 end
 
+local imgsrcs = {}
+function drawImg(path, ...)
+	if not imgsrcs[path] then
+		imgsrcs[path] = love.graphics.newImage(path)
+		if not imgsrcs[path] then
+			print("WARNING: NO IMAGE AT " .. path)
+			return
+		end
+	end
+	love.graphics.draw(imgsrcs[path], ...)
+end
+function getImg(path)
+	if not imgsrcs[path] then
+		imgsrcs[path] = love.graphics.newImage(path)
+		if not imgsrcs[path] then
+			print("WARNING: NO IMAGE AT " .. path)
+			return
+		end
+	end
+	return imgsrcs[path]
+end
 

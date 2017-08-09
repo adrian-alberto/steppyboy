@@ -1,5 +1,6 @@
 	--TODO: MENU STUFF. MOVE TO DIFFERENT FILE LATER
 local ssc = require("sscreader")
+
 function buildMainMenu(songdata)
 	local SONGINDEX = 1
 	local difficulties = {"Beginner", "Easy", "Medium", "Hard", "Challenge"}
@@ -102,7 +103,7 @@ function buildMainMenu(songdata)
 
 		local songimg
 		if string.len(data.JACKET) > 0 then
-			songimg = love.graphics.newImage("songs/"..data.folder.."/".. data.JACKET)
+			songimg = "songs/"..data.folder.."/".. data.JACKET
 		end
 		local header = ui.new(songui, "header", {1,-6,1,-6},{0,3,0,3})
 		function header:selfdraw(x,y,w,h)
@@ -121,9 +122,9 @@ function buildMainMenu(songdata)
 				else
 					love.graphics.setColor(100,100,100)
 				end
-				local imgw, imgh = songimg:getDimensions()
+				local imgw, imgh = getImg(songimg):getDimensions()
 				local scale = math.min(h/imgh, w/imgw)
-				love.graphics.draw(songimg, x + w/2 - imgw*scale/2,
+				drawImg(songimg, x + w/2 - imgw*scale/2,
 					y + h/2 - imgh*scale/2, 0, scale, scale)
 			else
 				love.graphics.rectangle("line", x, y, w, h)
