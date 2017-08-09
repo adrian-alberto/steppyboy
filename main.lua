@@ -165,10 +165,10 @@ function love.load()
 	end)
 	
 	--load main menu
-	currentUI = menuui.build(sfdata2)
+	--currentUI = menuui.build(sfdata2)
 
 	--TEMP, load single song
-	--[[
+	--
 	local data = songfastdata["Marvin Gaye"]
 	--local data = sfdata2[math.random(1,#sfdata2)]
 	local currentSong = ssc.song.new("songs/"..data.folder)

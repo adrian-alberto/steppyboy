@@ -40,7 +40,7 @@ function buildGameUI(reader)
 				end
 			end
 
-			love.graphics.setBlendMode("alpha")
+			love.graphics.setBlendMode("screen")
 			--targets
 			local beatAlpha = (currentBeat+beatSmear)%1
 			local tcolor = 125 - beatAlpha*100
