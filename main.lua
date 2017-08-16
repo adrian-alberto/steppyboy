@@ -78,8 +78,9 @@ function love.load()
 					elseif not love.filesystem.exists(gamefile) then
 						requireWrite = true
 						songRemoved = true
-					elseif false then
-						--file is mis-dated
+					elseif love.filesystem.getLastModified(gamefile) ~= get(lsplit, "updated") then
+						requireWrite = true
+                        songRemoved = true
 					end
 
 					if not songRemoved then
@@ -165,10 +166,10 @@ function love.load()
 	end)
 	
 	--load main menu
-	--currentUI = menuui.build(sfdata2)
+	currentUI = menuui.build(sfdata2)
 
 	--TEMP, load single song
-	--
+	--[[
 	local data = songfastdata["Marvin Gaye"]
 	--local data = sfdata2[math.random(1,#sfdata2)]
 	local currentSong = ssc.song.new("songs/"..data.folder)
