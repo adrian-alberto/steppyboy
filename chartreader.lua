@@ -142,16 +142,15 @@ local lastBeat = 0
 local lastTell = 0
 local lastTellGameTime = 0
 function ChartReader:getCurrentBeat()
-	local tell = self.src:tell()
-
 	--INTERPOLATE, src:tell() isn't very fast
+	local tell = self.src:tell()
 	if lastTell == tell then
 		tell = tell + gameTime - lastTellGameTime
 	else
 		lastTell = tell
 		lastTellGameTime = gameTime
 	end
-	
+
 	local t = tell + self.chart.OFFSET
 
 	local beat = 0
@@ -195,8 +194,15 @@ function ChartReader:play()
 	love.audio.play(self.src)
 end
 
-function ChartReader:press(noteIndex, t)
-	t = t or self.src:tell()
+function ChartReader:press(noteIndex)
+	local tell = self.src:tell()
+	if lastTell == tell then
+		tell = tell + gameTime - lastTellGameTime
+	else
+		lastTell = tell
+		lastTellGameTime = gameTime
+	end
+	local t = tell
 
 	for i = self.latestNoteJudged[noteIndex], #self.notes[noteIndex] do
 		local note = self.notes[noteIndex][i]
@@ -219,7 +225,15 @@ function ChartReader:press(noteIndex, t)
 end
 
 function ChartReader:release(noteIndex, t)
-	t = t or self.src:tell()
+	local tell = self.src:tell()
+	if lastTell == tell then
+		tell = tell + gameTime - lastTellGameTime
+	else
+		lastTell = tell
+		lastTellGameTime = gameTime
+	end
+	local t = tell
+	
 	for i = self.latestNoteJudged[noteIndex], #self.notes[noteIndex] do
 		local note = self.notes[noteIndex][i]
 		if note.judged and note.ntype == "2" and not note.liftPercent then

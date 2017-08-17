@@ -115,10 +115,10 @@ function buildGameUI(reader)
 			
 			if i == 1 then
 				love.graphics.setColor(200,255,200)
-				love.graphics.printf(judgment.text,x,y+i*20, w, "center")
+				love.graphics.printf(judgment.text .. judgment.ms,x,y+i*20, w, "center")
 			else
 				love.graphics.setColor(255,255,255)
-				love.graphics.printf(judgment.text,x,y+i*20, w, "center")
+				love.graphics.printf(judgment.text .. judgment.ms,x,y+i*20, w, "center")
 			end
 		end
 
