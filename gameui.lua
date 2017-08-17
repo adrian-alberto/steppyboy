@@ -15,7 +15,10 @@ function buildGameUI(reader)
 	colors[32] = {0, 150, 136} --#009688
 	colors[48] = {233, 30, 99} --#E91E63
 
-	function noteContainer:selfdraw()
+	function noteContainer:selfdraw(x,y,w,h)
+		love.graphics.setColor(0,0,0,100)
+		local width, height = love.window.getMode()
+		love.graphics.rectangle("fill",x,0,w,height)
 	end
 
 	for i = 1, 4 do
@@ -127,7 +130,7 @@ function buildGameUI(reader)
 		if bgpath then
 			love.graphics.setColor(255, 255, 255)
 			local imgw, imgh = getImg(bgpath):getDimensions()
-			local scale = math.min(h/imgh, w/imgw)
+			local scale = math.max(h/imgh, w/imgw)
 			drawImg(bgpath, x + w/2 - imgw*scale/2,
 				y + h/2 - imgh*scale/2, 0, scale, scale)
 		end

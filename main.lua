@@ -16,6 +16,7 @@ local currentReader
 
 
 function love.load()
+	print("HELLO WORLD")
 	math.randomseed(os.time())
 
 	love.audio.setVolume(SETTINGS.mastervolume)
@@ -75,22 +76,27 @@ function love.load()
 					if not songtitles[songtitle] then
 						requireWrite = true
 						songRemoved = true
+						print("folder does not exist", songtitle)
 					elseif not love.filesystem.exists(gamefile) then
 						requireWrite = true
 						songRemoved = true
+						print("ssc does not exist", songtitle)
 					elseif love.filesystem.getLastModified(gamefile) ~= tonumber(get(lsplit, "updated")) then
 						requireWrite = true
                         songRemoved = true
+                        print("mismatch", songtitle)
 					end
 
 					if not songRemoved then
 						--Copy to other file in case we have to rewrite
-						tempFileStr = tempFileStr..line
+						tempFileStr = tempFileStr..line.."\n"
 						local data = {}
 						for i, label in pairs(cacheTemplate) do
 							data[label] = lsplit[i]
 						end
 						songfastdata[songtitle] = data
+					else
+						print("removed?",songtitle)
 					end
 				end
 			end
@@ -165,9 +171,13 @@ function love.load()
 	end)
 	
 	--load main menu
-
 	local MAINMENU = menuui.build(sfdata2)
 	currentUI = MAINMENU
+
+	--DEBUG, test the only song
+	love.audio.stop()
+	loadSong(songfastdata["See You Again (Tyler)"])
+	currentReader.src:seek(15)
 
 end
 
