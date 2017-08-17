@@ -1,10 +1,10 @@
-local arrowimg = love.graphics.newImage("resources/arrow_outline_64.png")
+local arrowimg = love.graphics.newImage("resources/arrow_screen_64.png")
 function buildGameUI(reader)
 	local gameUI = ui.new()
 	gameUI.tag = "Game"
 	gameUI.NOTEDATA = reader.notes --TEMPORARY AS FUCK
 	gameUI.JUDGMENTS = reader.judgments
-	local noteContainer = ui.new(gameUI, "NoteContainer", {0,256,0,64},{0,20,0,60})
+	local noteContainer = ui.new(gameUI, "NoteContainer", {0,256,0,64},{0.5,-128,0,60})
 	local angles = {-math.pi/2, math.pi, 0, math.pi/2}
 	local colors = {}
 	colors[4] = {244, 67, 54} --#F44336
@@ -119,8 +119,8 @@ function buildGameUI(reader)
 	end
 
 	function gameUI:selfdraw(x,y,w,h)
-		--love.graphics.setColor(20,30,60,200)
-		love.graphics.setColor(30,30,30)
+		love.graphics.setColor(20,30,60,200)
+		--love.graphics.setColor(30,30,30)
 		love.graphics.rectangle("fill",x,y,w,h)
 	end
 

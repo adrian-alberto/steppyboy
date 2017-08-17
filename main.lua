@@ -155,8 +155,8 @@ function love.load()
 	local sfdata2 = {}
 	for title, data in pairs(songfastdata) do
 		table.insert(sfdata2, data)
-		if #sfdata2 > 80 then
-			--break
+		if #sfdata2 >= 80 then
+			break
 		end
 	end
 	table.sort(sfdata2, function(a, b)
@@ -165,21 +165,26 @@ function love.load()
 	end)
 	
 	--load main menu
-	--currentUI = menuui.build(sfdata2)
-
+	local MAINMENU = menuui.build(sfdata2)
+	currentUI = MAINMENU
 	--TEMP, load single song
 	--
-	local data = songfastdata["Marvin Gaye"]
-	--local data = sfdata2[math.random(1,#sfdata2)]
+
+	--]]
+	--currentReader.src:seek(60)
+
+
+end
+
+function loadSong(data)
+--local data = songfastdata["Marvin Gaye"]
+--local data = sfdata2[math.random(1,#sfdata2)]
 	local currentSong = ssc.song.new("songs/"..data.folder)
 	currentReader = chartreader.new(currentSong, "Challenge")
 	currentReader:loadNotes()
 	currentUI = gameui.build(currentReader)
 	currentReader:play()
-	--]]
-	--currentReader.src:seek(60)
-
-
+	print("???")
 end
 
 

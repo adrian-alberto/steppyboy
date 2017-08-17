@@ -16,32 +16,13 @@ function buildMainMenu(songdata)
 
 
 
-	local songContainer = ui.new(mainMenu, "songContainer", {0,210,0,210},{0.5,-210,0.5,-105})
+	local songContainer = ui.new(mainMenu, "songContainer", {0,310,0,310},{0.5,-310,0.5,-155})
 	
 	function songContainer:selfdraw()
 	end
 
-	local menuSong
-	local function switchSong(newIndex)
-		SONGINDEX = newIndex
-		local gx = ((SONGINDEX-1) % gridWidth)
-		local gy = math.floor((SONGINDEX-1) /gridWidth)
-		--mainMenu.children.songContainer.pos = {0.5,-gx*210-210,0.5,-gy*210-105}
-		songContainer:tween(songContainer.size, {0.5,-gx*210-210,0.5,-gy*210-105}, 0.3)
-		local tempsong = songdata[SONGINDEX]
-		if menuSong then
-			love.audio.stop(menuSong)
-		end
-		local srcpath = "songs/"..tempsong.folder.."/"..tempsong.MUSIC
-		if love.filesystem.isFile(srcpath) then
-			--menuSong = love.audio.newSource(srcpath, "stream")
-			
-			--love.audio.play(menuSong)
-			--menuSong:seek(tempsong.SAMPLESTART)
-		end
-		tempsong = nil
-	end
-	switchSong(1)
+	local menuSong, switchSong
+
 	function mainMenu:keypressed(key)
 		local gx = ((SONGINDEX-1) % gridWidth)
 		local gy = math.floor((SONGINDEX-1) /gridWidth)
@@ -53,6 +34,13 @@ function buildMainMenu(songdata)
 			gy = (gy + 1) % gridWidth
 		elseif key == "up" then
 			gy = (gy - 1) % gridWidth
+		elseif key == "return" then
+			if menuSong then
+				love.audio.stop(menuSong)
+				loadSong(songdata[SONGINDEX])
+				print("hwhat")
+			end
+			return
 		else
 			return
 		end
@@ -93,11 +81,6 @@ function buildMainMenu(songdata)
 			love.graphics.rectangle("fill",x,y+h,w,4)
 
 
-			local songinfo = data.TITLE .. "\n"
-				.. data.ARTIST
-
-			love.graphics.setColor(0,0,0)
-
 			--love.graphics.printf(songinfo, math.floor(x + 4), math.floor(y + 308), 200, "left")
 		end
 
@@ -110,9 +93,6 @@ function buildMainMenu(songdata)
 			local screenw, screenh = love.window.getMode()
 
 			if songimg then
-
-
-
 				love.graphics.setBlendMode("multiply")
 				love.graphics.setColor(180,180,180)
 				love.graphics.rectangle("fill", x,y,w,h)
@@ -129,6 +109,7 @@ function buildMainMenu(songdata)
 			else
 				love.graphics.rectangle("line", x, y, w, h)
 			end
+
 		end
 	end
 
@@ -149,6 +130,47 @@ function buildMainMenu(songdata)
 		love.graphics.rectangle("fill", x + gx*w, y + gy*h, w/gridWidth, w/gridWidth)
 	end
 
+	local songInfo = ui.new(songContainer, "songInfo", {0,260, 0, 400})
+	function songInfo:selfdraw(x,y,w,h)
+		love.graphics.setBlendMode("multiply")
+		love.graphics.setColor(100,100,100)
+		love.graphics.rectangle("fill",x-2,y-2,w+4,h+4)
+		love.graphics.setBlendMode("alpha")
+		love.graphics.setColor(200,200,200)
+		love.graphics.rectangle("fill",x,y,w,h)
+
+		love.graphics.setColor(0,0,0)
+
+		love.graphics.printf(self.info or "", x+4,y+4,w,"left")
+
+	end
+
+	function switchSong(newIndex)
+		SONGINDEX = newIndex
+		local gx = ((SONGINDEX-1) % gridWidth)
+		local gy = math.floor((SONGINDEX-1) /gridWidth)
+
+		songContainer:tween(songContainer.size, {0.5,-gx*310-310,0.5,-gy*310-155}, 0.2)
+
+		songInfo.pos = {gx+1,20,gy,-50}
+
+		local data = songdata[SONGINDEX]
+		songInfo.info = data.TITLE .. "\n" .. data.ARTIST .. "\n\n" .. data.CHARTS
+
+		local tempsong = songdata[SONGINDEX]
+		if menuSong then
+			love.audio.stop(menuSong)
+		end
+		local srcpath = "songs/"..tempsong.folder.."/"..tempsong.MUSIC
+		if love.filesystem.isFile(srcpath) then
+			menuSong = love.audio.newSource(srcpath, "stream")
+			love.audio.play(menuSong)
+			menuSong:seek(tempsong.SAMPLESTART)
+		end
+		tempsong = nil
+	end
+
+	switchSong(1)
 	return mainMenu
 end
 
