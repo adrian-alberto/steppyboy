@@ -78,8 +78,9 @@ function love.load()
 					elseif not love.filesystem.exists(gamefile) then
 						requireWrite = true
 						songRemoved = true
-					elseif false then
-						--file is mis-dated
+					elseif love.filesystem.getLastModified(gamefile) ~= get(lsplit, "updated") then
+						requireWrite = true
+                        songRemoved = true
 					end
 
 					if not songRemoved then
@@ -165,26 +166,18 @@ function love.load()
 	end)
 	
 	--load main menu
+
 	local MAINMENU = menuui.build(sfdata2)
 	currentUI = MAINMENU
-	--TEMP, load single song
-	--
-
-	--]]
-	--currentReader.src:seek(60)
-
 
 end
 
 function loadSong(data)
---local data = songfastdata["Marvin Gaye"]
---local data = sfdata2[math.random(1,#sfdata2)]
 	local currentSong = ssc.song.new("songs/"..data.folder)
 	currentReader = chartreader.new(currentSong, "Challenge")
 	currentReader:loadNotes()
 	currentUI = gameui.build(currentReader)
 	currentReader:play()
-	print("???")
 end
 
 
