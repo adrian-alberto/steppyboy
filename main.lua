@@ -12,7 +12,7 @@ SETTINGS = {
 
 local currentUI
 local currentReader
-
+local MAINMENU
 
 
 function love.load()
@@ -95,8 +95,6 @@ function love.load()
 							data[label] = lsplit[i]
 						end
 						songfastdata[songtitle] = data
-					else
-						print("removed?",songtitle)
 					end
 				end
 			end
@@ -161,9 +159,9 @@ function love.load()
 
 	local sfdata2 = {}
 	for title, data in pairs(songfastdata) do
-		if data.ARTIST == "Tyler the Creator" then
+		--if data.ARTIST == "Tyler the Creator" then
 			table.insert(sfdata2, data)
-		end
+		--end
 	end
 	table.sort(sfdata2, function(a, b)
 		return a.ARTIST..a.TITLE < b.ARTIST..b.TITLE
@@ -171,14 +169,15 @@ function love.load()
 	end)
 	
 	--load main menu
-	local MAINMENU = menuui.build(sfdata2)
+	MAINMENU = menuui.build(sfdata2)
 	currentUI = MAINMENU
 
 	--DEBUG, test the only song
+	--
 	love.audio.stop()
 	loadSong(songfastdata["See You Again (Tyler)"])
-	currentReader.src:seek(15)
-
+	currentReader.src:seek(46)
+	--]]
 end
 
 function loadSong(data)
@@ -187,6 +186,14 @@ function loadSong(data)
 	currentReader:loadNotes()
 	currentUI = gameui.build(currentReader)
 	currentReader:play()
+end
+
+function exitToMenu()
+	if currentReader then
+		love.audio.stop(currentReader.src)
+	end
+	currentReader = nil
+	currentUI = MAINMENU
 end
 
 
@@ -200,6 +207,8 @@ function love.keypressed(key)
 	if currentReader then
 		if keyTranslate[key] then
 			currentReader:press(keyTranslate[key])
+		elseif key == "escape" then
+			exitToMenu()
 		end
 	elseif currentUI.tag == "SongSelect" then
 		currentUI:keypressed(key)

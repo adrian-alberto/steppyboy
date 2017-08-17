@@ -28,8 +28,8 @@ function buildGameUI(reader)
 			local currentBeat, currentSpeed, beatSmear = reader:getCurrentBeat()
 
 			if i == 1 then
-				love.graphics.setColor(90,90,90)
-				love.graphics.print(currentBeat, 10,10)
+				love.graphics.setColor(0,0,0)
+				love.graphics.print("Measure " .. math.floor(currentBeat/4), 10,10)
 				love.graphics.print(reader.src:tell(), 10,30)
 			end
 
@@ -74,12 +74,24 @@ function buildGameUI(reader)
 							end
 						end
 						if not note.liftPercent then
-							love.graphics.draw(arrowimg, NOTEX, NOTEY_0, angles[i], w/64,w/64,32,32)
 							
-							love.graphics.line(x, NOTEY_0, x, NOTEY_1)
-							love.graphics.line(x+w, NOTEY_0, x+w, NOTEY_1)
-							love.graphics.line(x, NOTEY_1, NOTEX, NOTEY_1 + w/2)
-							love.graphics.line(x+w, NOTEY_1, NOTEX, NOTEY_1 + w/2)
+							
+							local r,g,b = love.graphics.getColor()
+							love.graphics.setColor(0,0,0)
+							love.graphics.setLineWidth(4)
+							--x = math.floor(x+0.5)
+							love.graphics.line(x+3, NOTEY_0, x+3, NOTEY_1)
+							love.graphics.line(x+w-3, NOTEY_0, x+w-3, NOTEY_1)
+							love.graphics.line(x+3, NOTEY_1, NOTEX, NOTEY_1 + w/2 - 3)
+							love.graphics.line(x+w-3, NOTEY_1, NOTEX, NOTEY_1 + w/2 - 3)
+
+							love.graphics.setColor(r,g,b)
+							love.graphics.setLineWidth(2)
+							love.graphics.line(x+3, NOTEY_0, x+3, NOTEY_1)
+							love.graphics.line(x+w-3, NOTEY_0, x+w-3, NOTEY_1)
+							love.graphics.line(x+3, NOTEY_1, NOTEX, NOTEY_1 + w/2 - 3)
+							love.graphics.line(x+w-3, NOTEY_1, NOTEX, NOTEY_1 + w/2 - 3)
+							love.graphics.draw(arrowimg, NOTEX, NOTEY_0, angles[i], w/64,w/64,32,32)
 						end
 					end
 
