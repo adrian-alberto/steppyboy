@@ -197,7 +197,7 @@ function exitToMenu()
 end
 
 
-local gameTime = 0
+gameTime = 0
 function love.update(dt)
 	gameTime = love.timer.getTime()
 end

@@ -138,8 +138,21 @@ function ChartReader:loadNotes()
 end
 local finalmarker
 local lastBeat = 0
+
+local lastTell = 0
+local lastTellGameTime = 0
 function ChartReader:getCurrentBeat()
-	local t = self.src:tell() + self.chart.OFFSET
+	local tell = self.src:tell()
+
+	--INTERPOLATE, src:tell() isn't very fast
+	if lastTell == tell then
+		tell = tell + gameTime - lastTellGameTime
+	else
+		lastTell = tell
+		lastTellGameTime = gameTime
+	end
+	
+	local t = tell + self.chart.OFFSET
 
 	local beat = 0
 	local bpm = 0
