@@ -78,7 +78,7 @@ function love.load()
 					elseif not love.filesystem.exists(gamefile) then
 						requireWrite = true
 						songRemoved = true
-					elseif love.filesystem.getLastModified(gamefile) ~= get(lsplit, "updated") then
+					elseif love.filesystem.getLastModified(gamefile) ~= tonumber(get(lsplit, "updated")) then
 						requireWrite = true
                         songRemoved = true
 					end
@@ -155,9 +155,9 @@ function love.load()
 
 	local sfdata2 = {}
 	for title, data in pairs(songfastdata) do
-		--if data.ARTIST == "Taylor Swift" then
+		if data.ARTIST == "Tyler the Creator" then
 			table.insert(sfdata2, data)
-		--end
+		end
 	end
 	table.sort(sfdata2, function(a, b)
 		return a.ARTIST..a.TITLE < b.ARTIST..b.TITLE
