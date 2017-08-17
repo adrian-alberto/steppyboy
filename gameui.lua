@@ -1,4 +1,4 @@
-local arrowimg = love.graphics.newImage("resources/arrow_screen_64.png")
+local arrowimg = love.graphics.newImage("resources/arrow_outline_64.png")
 function buildGameUI(reader)
 	local gameUI = ui.new()
 	gameUI.tag = "Game"
@@ -28,25 +28,16 @@ function buildGameUI(reader)
 				love.graphics.setColor(90,90,90)
 				love.graphics.print(currentBeat, 10,10)
 				love.graphics.print(reader.src:tell(), 10,30)
-				if #reader.judgments > 0 then
-					local temp = {}
-					for j = 1, #reader.judgments do
-						table.insert(temp, reader.judgments[j].ms)
-					end
-					table.sort(temp)
-
-
-					love.graphics.print(temp[math.ceil(#temp/2)],200,10)
-				end
 			end
 
 			love.graphics.setBlendMode("screen")
 			--targets
 			local beatAlpha = (currentBeat+beatSmear)%1
-			local tcolor = 125 - beatAlpha*100
+			local tcolor = 200 - beatAlpha*100
 			love.graphics.setColor(tcolor+16,tcolor+24,tcolor+47)
-			love.graphics.draw(arrowimg, x+w/2, y+w/2, angles[i], 1-beatAlpha/10,1-beatAlpha/10,32,32)
+			drawImg("resources/arrow_screen_64.png", x+w/2, y+w/2, angles[i], 1-beatAlpha/10,1-beatAlpha/10,32,32)
 			--DRAW NOTES IN THIS COLUMN
+			love.graphics.setBlendMode("alpha")
 			local notelist = self.parent.parent.NOTEDATA[i]
 			for _, note in pairs(notelist) do
 				if (note.beat - currentBeat) < 8 and (note.beat - currentBeat) > -2 
@@ -118,10 +109,28 @@ function buildGameUI(reader)
 
 	end
 
+	local bgpath
+	for _, item in pairs(love.filesystem.getDirectoryItems(reader.song.dir)) do
+		print(item)
+		if string.match(item, ".*bg%.png$") or string.match(item, ".*background%.png$") then
+			print("bop")
+			bgpath = reader.song.dir .. "/" .. item
+			break
+		end
+	end
+
 	function gameUI:selfdraw(x,y,w,h)
-		love.graphics.setColor(20,30,60,200)
+		--love.graphics.setColor(20,30,60,200)
 		--love.graphics.setColor(30,30,30)
+		love.graphics.setColor(0,0,0)
 		love.graphics.rectangle("fill",x,y,w,h)
+		if bgpath then
+			love.graphics.setColor(255, 255, 255)
+			local imgw, imgh = getImg(bgpath):getDimensions()
+			local scale = math.min(h/imgh, w/imgw)
+			drawImg(bgpath, x + w/2 - imgw*scale/2,
+				y + h/2 - imgh*scale/2, 0, scale, scale)
+		end
 	end
 
 	return gameUI

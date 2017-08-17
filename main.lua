@@ -155,10 +155,9 @@ function love.load()
 
 	local sfdata2 = {}
 	for title, data in pairs(songfastdata) do
-		table.insert(sfdata2, data)
-		if #sfdata2 >= 80 then
-			break
-		end
+		--if data.ARTIST == "Taylor Swift" then
+			table.insert(sfdata2, data)
+		--end
 	end
 	table.sort(sfdata2, function(a, b)
 		return a.ARTIST..a.TITLE < b.ARTIST..b.TITLE
@@ -213,5 +212,7 @@ function love.draw()
 	if currentUI then
 		currentUI:draw(0,0,width,height)
 	end
+	love.graphics.setColor(255,255,255)
+	love.graphics.print(love.timer.getFPS(),width-40,20)
 end
 
