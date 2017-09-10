@@ -7,7 +7,7 @@ local menuui = require("menu")
 
 SETTINGS = {
 	calibration = 0.125, -- 0.125 + or - 13
-	mastervolume = 0.1,
+	mastervolume = 0.05,
 }
 
 local currentUI
@@ -173,7 +173,7 @@ function love.load()
 	currentUI = MAINMENU
 
 	--DEBUG, test the only song
-	--
+	--[[
 	love.audio.stop()
 	loadSong(songfastdata["See You Again (Tyler)"])
 	currentReader.src:seek(46)
@@ -182,7 +182,7 @@ end
 
 function loadSong(data)
 	local currentSong = ssc.song.new("songs/"..data.folder)
-	currentReader = chartreader.new(currentSong, "Challenge")
+	currentReader = chartreader.new(currentSong,"Challenge" )
 	currentReader:loadNotes()
 	currentUI = gameui.build(currentReader)
 	currentReader:play()
